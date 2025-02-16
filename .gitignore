@@ -1,2 +1,10 @@
+#IDE's
 .vscode/
 
+#Binaries
+libraries/vf-logger/build/libvf-logger.a
+libraries/vf-logger/build/test_logger
+libraries/vf-logger/build/vf-logger.o
+
+#Log output
+libraries/vf-logger/build/log.txt
