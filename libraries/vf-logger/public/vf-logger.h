@@ -3,21 +3,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <time.h>
-
-#define COLOR_RESET        "\033[0m"
-#define COLOR_INFO         "\033[94m"
-#define COLOR_WARNING      "\033[33m"
-#define COLOR_DEBUG        "\033[96m"
-#define COLOR_ERROR        "\033[31m"
-#define COLOR_FATAL        "\033[91m"
-
-#define VF_LOG_INFO_STR    "INFO"
-#define VF_LOG_WARNING_STR "WARNING"
-#define VF_LOG_DEBUG_STR   "DEBUG"
-#define VF_LOG_ERROR_STR   "ERROR"
-#define VF_LOG_FATAL_STR   "FATAL"
-#define VF_LOG_UNKNOWN_STR "UNKNOWN"
 
 typedef enum {
     LOG_INFO,
@@ -27,12 +14,16 @@ typedef enum {
     LOG_FATAL
 } LogLevel;
 
-void log_message(LogLevel level, const char *message, const char *file, int line);
+void log_message(LogLevel level, const char *file, int line, const char *func, const char *fmt, ...);
 void set_log_level(LogLevel level);
 void set_log_file(const char *filename);
 void enable_console_log(int enabled);
 
-#define LOG_MESSAGE(level, message) log_message(level, message, __FILE__, __LINE__)
+#define log_info(fmt, ...)    log_message(LOG_INFO, __FILE__, __LINE__, __func__, fmt, ##__VA_ARGS__)
+#define log_warning(fmt, ...) log_message(LOG_WARNING, __FILE__, __LINE__, __func__, fmt, ##__VA_ARGS__)
+#define log_debug(fmt, ...)   log_message(LOG_DEBUG, __FILE__, __LINE__, __func__, fmt, ##__VA_ARGS__)
+#define log_error(fmt, ...)   log_message(LOG_ERROR, __FILE__, __LINE__, __func__, fmt, ##__VA_ARGS__)
+#define log_fatal(fmt, ...)   log_message(LOG_FATAL, __FILE__, __LINE__, __func__, fmt, ##__VA_ARGS__)
 
 #endif /* __VF_LOGGER_H__ */
 
