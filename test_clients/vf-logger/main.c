@@ -5,11 +5,11 @@
 int main() {
     enable_console_log(1);
 
-    LOG_MESSAGE(LOG_INFO, "Application initialization...");
-    LOG_MESSAGE(LOG_WARNING, "Warning: Improper use of resources!");
-    LOG_MESSAGE(LOG_ERROR, "Error accessing the database!");
-    LOG_MESSAGE(LOG_DEBUG, "Debug details: function X is called.");
-    LOG_MESSAGE(LOG_FATAL, "FATAL details: function X is called.");
+    log_info("Application initialization...\n");
+    log_warning("Warning: Improper use of resources!\n");
+    log_error("Error accessing the database!\n");
+    log_debug("Debug details: function X is called.\n");
+    //log_fatal("FATAL details: function X is called.\n");
 
     return 0;
 }
