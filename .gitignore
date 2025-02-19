@@ -2,9 +2,16 @@
 .vscode/
 
 #Binaries
+libraries/camera/build/libcamera.a
+libraries/camera/build/test_camera
+libraries/camera/build/camera.o
 libraries/vf-logger/build/libvf-logger.a
 libraries/vf-logger/build/test_logger
 libraries/vf-logger/build/vf-logger.o
+build/test_vf_service
+build/main.o
 
 #Log output
+libraries/camera/build/log.txt
 libraries/vf-logger/build/log.txt
+log.txt
