@@ -2,6 +2,9 @@
 .vscode/
 
 #Binaries
+libraries/vf-common/build/libvf-common.a
+libraries/vf-common/build/test_vf_common
+libraries/vf-common/build/vf-error.o
 libraries/camera/build/libcamera.a
 libraries/camera/build/test_camera
 libraries/camera/build/camera.o
