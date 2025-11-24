@@ -6,12 +6,12 @@ int main() {
 
     log_info("Starting application initialization...\n");
 
-    CameraConfig config1 = {3840, 2160, 30, 1};
+    // CameraConfig config1 = {3840, 2160, 30, 1};
 
-    if (camera_init(&config1) != 0) {
-        log_error("Error initializing the camera!\n");
-        return 1;
-    }
+    // if (camera_init(&config1) != 0) {
+    //     log_error("Error initializing the camera!\n");
+    //     return 1;
+    // }
 
     log_info("Camera initialized.\n");
 
@@ -20,7 +20,7 @@ int main() {
     log_debug("Debug details: function X was called.\n");
     //log_fatal("FATAL: Details function X.\n");
 
-    camera_close();
+    //camera_close();
 
     log_info("Camera closed.\n");
 
