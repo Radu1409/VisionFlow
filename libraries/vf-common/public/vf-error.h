@@ -6,6 +6,8 @@ typedef enum {
 
     VF_SUCCESS                     = 0,
     VF_INVALID_PARAMETER           = 1,
+    VF_OOM                         = 1,
+    VF_SYNC_ERROR                  = 1,
     VF_INIT_FAILED                 = 2,
     VF_FILE_ERR                    = 3,
 
