@@ -58,7 +58,7 @@ typedef struct {
         uint32_t           plane_stride[MAX_PLANE_COUNT];
         uint32_t           plane_size[MAX_PLANE_COUNT];
         size_t             total_size;
-        vf_fb_params_st_t params;
+        vf_fb_params_st_t  params;
 } vf_fb_st_t;
 
 /**
@@ -82,6 +82,17 @@ vf_color_fmt_bpp_t vf_framebuffer_get_color_fmt_bpp(vf_color_fmt_t color_fmt);
  * @return        Pointer to vf_fb_st_t structure
  */
 vf_fb_st_t *vf_alloc_framebuffer(const vf_fb_params_st_t *params);
+
+/*
+ * @FUNCTION vf_copy_framebuffer
+ *
+ * @brief         Allocates memory and copy from fb to new mem
+ *
+ * @param[in]     fb     Pointer to framebuffer
+ *
+ * @return        Pointer to vf_fb_st_t structure
+ */
+vf_fb_st_t *vf_copy_framebuffer(const vf_fb_params_st_t *fb);
 
 /*
  * @FUNCTION vf_free_framebuffer

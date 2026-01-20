@@ -211,6 +211,26 @@ vf_fb_st_t *vf_alloc_framebuffer(const vf_fb_params_st_t *params)
 //         return NULL;
 }
 
+vf_fb_st_t *vf_copy_framebuffer(const vf_fb_st_t *fb)
+{
+        vf_fb_st_t *fb_copy = NULL;
+
+        if (NULL == fb) {
+                log_error("Invalid input param: fb = %p\n", fb);
+
+                return NULL;
+        }
+
+        fb_copy = vf_alloc_framebuffer(&fb->params);
+        if (NULL == fb_copy) {
+                log_error("Failed to allocate framebuffer\n");
+
+                return NULL;
+        }
+
+        return fb_copy;
+}
+
 void vf_free_framebuffer(vf_fb_st_t **fb)
 {
         if (NULL == fb) {
