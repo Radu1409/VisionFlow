@@ -17,13 +17,14 @@
 #ifndef VF_ENCODER_UNIT__H
 #define VF_ENCODER_UNIT__H
 
-#include "vf-error.h"
+#include "vf-processing-unit.h"
 
 vf_err_t encoder_unit_init(void *ctx, ...);
 vf_err_t encoder_unit_deinit(void *ctx, ...);
 vf_err_t encoder_unit_get_data(void *ctx, ...);
 vf_err_t encoder_unit_send_data(void *ctx, ...);
 vf_err_t encoder_unit_process_data(void *ctx, ...);
+vf_err_t encoder_unit_init_operations(operations_st_t *ops);
 
 #endif /* VF_ENCODER_UNIT__H */
 

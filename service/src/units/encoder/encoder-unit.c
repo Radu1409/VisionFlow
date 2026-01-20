@@ -36,3 +36,22 @@ vf_err_t encoder_unit_process_data(void *ctx, ...) {
         return VF_SUCCESS;
 }
 
+vf_err_t encoder_unit_init_operations(operations_st_t *ops)
+{
+        if (NULL == ops) {
+                log_error("Invalid input: ops = %p\n", ops);
+
+                return VF_INVALID_PARAMETER;
+        }
+
+        ops->init = encoder_unit_init;
+        ops->deinit = encoder_unit_deinit;
+        ops->get_data = encoder_unit_get_data;
+        ops->send_data = encoder_unit_send_data;
+        ops->process_data = encoder_unit_process_data;
+
+        log_info("Encoder unit operations initialized!\n");
+
+        return VF_SUCCESS;
+}
+
