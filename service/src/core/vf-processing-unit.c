@@ -18,6 +18,12 @@
 #include "vf-logger.h"
 #include "vf-processing-unit.h"
 
+// #include "c2c-unit.h"
+#include "camera-unit.h"
+#include "conversion-unit.h"
+#include "display-unit.h"
+#include "encoder-unit.h"
+
 #define NOTIFY_PARENT_TIME      1
 
 static
@@ -38,6 +44,50 @@ const char *unit_type2str(unit_type_t type)
 }
 
 static
+vf_err_t set_unit_operations(unit_st_t *unit)
+{
+        vf_err_t rc = VF_SUCCESS;
+
+        if (NULL == unit) {
+                log_error("Invalid input: unit = %p\n", unit);
+
+                return VF_INVALID_PARAMETER;
+        }
+
+        switch (unit->type) {
+        case UNIT_TYPE_CAMERA:
+                rc = camera_unit_init_operations(&unit->operations);
+
+                break;
+        case UNIT_TYPE_DISPLAY:
+                rc = display_unit_init_operations(&unit->operations);
+
+                break;
+        // case UNIT_TYPE_C2C:
+        //         rc = c2c_unit_init_operations(&unit->operations);
+
+        //         break;
+        case UNIT_TYPE_ENCODER:
+                rc = encoder_unit_init_operations(&unit->operations);
+
+                break;
+        case UNIT_TYPE_CONVERSION:
+                rc = conversion_unit_init_operations(&unit->operations);
+
+                break;
+        default:
+                log_error("Invalid unit: type: %d\n", unit->type);
+
+                return VF_INVALID_PARAMETER;
+        }
+
+        log_debug("Unit (\"%s\") operation initialization finished with result: %s\n",
+                  unit_type2str(unit->type), vf_err2str(rc));
+
+        return rc;
+}
+
+static
 vf_err_t init_unit(unit_st_t *unit)
 {
         vf_err_t rc = VF_SUCCESS;
@@ -49,6 +99,13 @@ vf_err_t init_unit(unit_st_t *unit)
         }
 
         unit->state = UNIT_STATE_INITIALIZATION;
+
+        rc = set_unit_operations(unit);
+        if (VF_SUCCESS != rc) {
+                log_error("Failed to unit. Error: %s\n", vr_err2str(rc));
+
+                return rc;
+        }
 
         log_info("Unit (\"%s\") initialization finished successfully\n", SAFE_STR(unit->name));
 
