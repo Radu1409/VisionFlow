@@ -56,11 +56,20 @@ typedef enum unit_state {
         UNIT_STATE_INITIALIZED      = 5,        
 } unit_state_t;
 
+typedef struct unit_stats {
+        uint64_t obtained_frames_cnt;
+        uint64_t sent_frames_cnt;
+        double   avg_obtained_fps;
+        double   avg_processed_fps;
+        double   avg_sent_fps;
+} unit_stats_st_t;
+
 typedef struct unit {
         unit_type_t       type;
         unit_state_t      state;
         const char        *name;
         struct operations operations;
+        struct unit_stats stats;
         union {
         } settings;
 
