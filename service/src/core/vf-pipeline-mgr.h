@@ -30,5 +30,8 @@ typedef struct pipeline_mgr_ctx {
         struct pipeline *pipelines;
 } pipeline_mgr_ctx_st_t;
 
+vf_err_t vf_create_pipelines(pipeline_mgr_ctx_st_t *ctx);
+void vf_destroy_pipelines(pipeline_mgr_ctx_st_t *ctx);
+
 #endif /* VF_PIPELINE_MGR__H */
 
