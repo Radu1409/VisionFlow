@@ -93,7 +93,7 @@ vf_err_t init_unit(unit_st_t *unit)
         vf_err_t rc = VF_SUCCESS;
 
         if (NULL == unit) {
-                log_err("Invalid input: unit = %p\n", unit);
+                log_error("Invalid input: unit = %p\n", unit);
 
                 return VF_INVALID_PARAMETER;
         }
@@ -107,6 +107,16 @@ vf_err_t init_unit(unit_st_t *unit)
                 return rc;
         }
 
+        rc = unit->operations.init(unit);
+        if (VF_SUCCESS != rc) {
+                log_error("Failed to initialize unit (\"%s\"). Error: %s\n", SAFE_STR(unit->name),
+                         vf_err2str(rc));
+
+                return rc;
+        }
+
+        unit->state = UNIT_STATE_INITIALIZED;
+
         log_info("Unit (\"%s\") initialization finished successfully\n", SAFE_STR(unit->name));
 
         return rc;
@@ -116,7 +126,7 @@ static
 void deinit_unit(unit_st_t *unit)
 {
         if (NULL == unit) {
-                log_err("Invalid input: unit = %p\n", unit);
+                log_error("Invalid input: unit = %p\n", unit);
 
                 return;
         }
@@ -124,6 +134,10 @@ void deinit_unit(unit_st_t *unit)
         log_info("Unit (\"%s\") de-initialization started\n", SAFE_STR(unit->name));
 
         unit->state = UNIT_STATE_DEINITIALIZATION;
+
+        unit->operations.deinit(unit);
+
+        unit->state = UNIT_STATE_DEINITIALIZED;
 
         log_info("Unit (\"%s\") de-initialization finished\n", SAFE_STR(unit->name));
 
@@ -137,16 +151,51 @@ void unit_cleanup_handler(void *arg)
 
         unit = (unit_st_t *)arg;
         if (NULL == unit) {
-            log_err("Invalid input: unit = %p\n", unit);
+            log_error("Invalid input: unit = %p\n", unit);
 
             return;
         }
 
-        log_err("Clean-up handler called for unit: %s\n", unit->name);
+        log_error("Clean-up handler called for unit: %s\n", unit->name);
 
         //vf_notifier_deinit(&unit->notifier);
 
         deinit_unit(unit);
+}
+
+static
+vf_err_t unit_data_handling_routine(unit_st_t *unit)
+{
+        vf_err_t rc = VF_SUCCESS;
+
+        if (NULL == unit) {
+                log_error("Invalid input: unit = %p\n", unit);
+
+                return VF_INVALID_PARAMETER;
+        }
+
+        rc = unit->operations.get_data(unit);
+        if (VF_SUCCESS != rc) {
+                log_error("Failed to obtain data. Error: %s\n", cdf_err2str(rc));
+
+                return rc;
+        }
+
+        rc = unit->operations.process_data(unit);
+        if (VF_SUCCESS != rc) {
+                log_error("Failed to process data. Error: %s\n", cdf_err2str(rc));
+
+                return rc;
+        }
+
+        rc = unit->operations.send_data(unit);
+        if (VF_SUCCESS != rc) {
+                log_error("Failed to send data. Error: %s\n", cdf_err2str(rc));
+
+                return rc;
+        }
+
+        return rc;
 }
 
 static
@@ -157,7 +206,7 @@ void *unit_task(void *arg)
 
         unit = (unit_st_t *)arg;
         if (NULL == unit) {
-                log_err("Invalid input: unit = %p\n", unit);
+                log_error("Invalid input: unit = %p\n", unit);
 
                 return NULL;
         }
@@ -166,14 +215,14 @@ void *unit_task(void *arg)
 
         // rc = vf_notifier_init(&unit->notifier);
         // if (VF_SUCCESS != rc) {
-        //         log_err("Failed to initialize notifier. Error: %s\n", vf_err2str(rc));
+        //         log_error("Failed to initialize notifier. Error: %s\n", vf_err2str(rc));
 
         //         goto stop_unit_task;
         // }
 
         rc = init_unit(unit);
         if (VF_SUCCESS != rc) {
-                log_err("Failed to initialize unit. Error: %s\n", vf_err2str(rc));
+                log_error("Failed to initialize unit. Error: %s\n", vf_err2str(rc));
 
                 goto stop_unit_task;
         }
@@ -182,6 +231,14 @@ void *unit_task(void *arg)
 
         while (UNIT_STATE_RUNNING == unit->state) {
                 pthread_testcancel();
+
+                rc = unit_data_handling_routine(unit);
+                if (VF_SUCCESS != rc) {
+                        log_error("Failed to proceed with data handling routine. Error: %s\n",
+                                 vf_err2str(rc));
+
+                        goto stop_unit_task;
+                }
         }
 
 stop_unit_task:
@@ -198,7 +255,7 @@ vf_err_t vf_create_unit(unit_st_t *unit)
         int err = EOK;
 
         if (NULL == unit) {
-                log_err("Invalid input: unit = %p\n", unit);
+                log_error("Invalid input: unit = %p\n", unit);
 
                 return VF_INVALID_PARAMETER;
         }
@@ -208,12 +265,12 @@ vf_err_t vf_create_unit(unit_st_t *unit)
 
         err = pthread_create(&unit->tid, NULL, unit_task, unit);
         if (EOK != err) {
-                log_err("Failed to start unit task. Error: %s\n", strerror(err));
+                log_error("Failed to start unit task. Error: %s\n", strerror(err));
 
                 return VF_INIT_FAILED;
         }
 
-        log_dbg("Unit (\"%s\") thread ID is: %d\n", SAFE_STR(unit->name), unit->tid);
+        log_debug("Unit (\"%s\") thread ID is: %d\n", SAFE_STR(unit->name), unit->tid);
 
         return rc;
 }
@@ -223,7 +280,7 @@ void vf_destroy_unit(unit_st_t *unit)
         int err = EOK;
 
         if (NULL == unit) {
-                log_err("Invalid input: unit = %p\n", unit);
+                log_error("Invalid input: unit = %p\n", unit);
 
                 return;
         }
@@ -232,16 +289,16 @@ void vf_destroy_unit(unit_st_t *unit)
 
         err = pthread_cancel(unit->tid);
         if (EOK != err) {
-                log_err("Failed to cancel thread: %d. Error: %s\n", unit->tid, strerror(err));
+                log_error("Failed to cancel thread: %d. Error: %s\n", unit->tid, strerror(err));
 
                 return;
         }
 
-        log_dbg("Waiting joining of thread with tid: %d\n", unit->tid);
+        log_debug("Waiting joining of thread with tid: %d\n", unit->tid);
 
         err = pthread_join(unit->tid, NULL);
         if (EOK != err) {
-                log_err("Failed to join unit thread: %d. Error: %s\n", unit->tid, strerror(err));
+                log_error("Failed to join unit thread: %d. Error: %s\n", unit->tid, strerror(err));
         }
 
         unit->state = UNIT_STATE_STOPPED;
