@@ -36,7 +36,7 @@ vf_err_t create_pipeline(pipeline_st_t *pipe)
                 return VF_INVALID_PARAMETER;
         }
 
-        log_info("Creating pipeline (\"%s\")\n", SAFE_STR(pipe->name));
+        log_info("Creating pipeline (\'%s\')\n", SAFE_STR(pipe->name));
         log_info("Found (%d) units in pipeline\n", pipe->units_num);
 
         for (i = 0; i < pipe->units_num; i++) {
@@ -48,7 +48,7 @@ vf_err_t create_pipeline(pipeline_st_t *pipe)
                 }
         }
 
-        log_info("Pipeline (\"%s\") initialization finished successfully\n", SAFE_STR(pipe->name));
+        log_info("Pipeline (\'%s\') initialization finished successfully\n", SAFE_STR(pipe->name));
 
         return rc;
 }
@@ -70,13 +70,13 @@ void destroy_pipeline(pipeline_st_t *pipe)
                 return;
         }
 
-        log_info("Pipeline (\"%s\") de-initialization started\n", SAFE_STR(pipe->name));
+        log_info("Pipeline (\'%s\') de-initialization started\n", SAFE_STR(pipe->name));
 
         for (i = 0; i < pipe->units_num; i++) {
                 vf_destroy_unit(&pipe->units[i]);
         }
 
-        log_info("Pipeline (\"%s\") de-initialization finished\n", SAFE_STR(pipe->name));
+        log_info("Pipeline (\'%s\') de-initialization finished\n", SAFE_STR(pipe->name));
 }
 
 vf_err_t vf_create_pipelines(pipeline_mgr_ctx_st_t *ctx)

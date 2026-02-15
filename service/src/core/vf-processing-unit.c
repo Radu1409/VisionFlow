@@ -104,7 +104,7 @@ vf_err_t set_unit_operations(unit_st_t *unit)
                 return VF_INVALID_PARAMETER;
         }
 
-        log_debug("Unit (\"%s\") operation initialization finished with result: %s\n",
+        log_debug("Unit (\'%s\') operation initialization finished with result: %s\n",
                   unit_type2str(unit->type), vf_err2str(rc));
 
         return rc;
@@ -132,8 +132,8 @@ vf_err_t init_unit(unit_st_t *unit)
 
         rc = unit->operations.init(unit);
         if (VF_SUCCESS != rc) {
-                log_error("Failed to initialize unit (\"%s\"). Error: %s\n", SAFE_STR(unit->name),
-                         vf_err2str(rc));
+                log_error("Failed to initialize unit (\'%s\'). Error: %s\n", SAFE_STR(unit->name),
+                           vf_err2str(rc));
 
                 return rc;
         }
@@ -154,7 +154,7 @@ void deinit_unit(unit_st_t *unit)
                 return;
         }
 
-        log_info("Unit (\"%s\") de-initialization started\n", SAFE_STR(unit->name));
+        log_info("Unit (\'%s\') de-initialization started\n", SAFE_STR(unit->name));
 
         unit->state = UNIT_STATE_DEINITIALIZATION;
 
@@ -162,7 +162,7 @@ void deinit_unit(unit_st_t *unit)
 
         unit->state = UNIT_STATE_DEINITIALIZED;
 
-        log_info("Unit (\"%s\") de-initialization finished\n", SAFE_STR(unit->name));
+        log_info("Unit (\'%s\') de-initialization finished\n", SAFE_STR(unit->name));
 
         return;
 }
@@ -466,7 +466,7 @@ vf_err_t vf_create_unit(unit_st_t *unit)
                 return VF_INVALID_PARAMETER;
         }
 
-        log_info("Creating unit (\"%s\") with type: (\"%s\")\n", SAFE_STR(unit->name),
+        log_info("Creating unit (\'%s\') with type: (\'%s\')\n", SAFE_STR(unit->name),
                  unit_type2str(unit->type));
 
         err = pthread_create(&unit->tid, NULL, unit_task, unit);
@@ -491,7 +491,7 @@ void vf_destroy_unit(unit_st_t *unit)
                 return;
         }
 
-        log_info("Destroing unit (\"%s\") with tid\n", SAFE_STR(unit->name), unit->tid);
+        log_info("Destroing unit (\'%s\') with tid\n", SAFE_STR(unit->name), unit->tid);
 
         err = pthread_cancel(unit->tid);
         if (EOK != err) {
@@ -509,7 +509,7 @@ void vf_destroy_unit(unit_st_t *unit)
 
         unit->state = UNIT_STATE_STOPPED;
 
-        log_info("Unit (\"%s\") destroing finished\n", SAFE_STR(unit->name));
+        log_info("Unit (\'%s\') destroing finished\n", SAFE_STR(unit->name));
 
         return;
 }
