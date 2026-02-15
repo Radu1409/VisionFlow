@@ -1,0 +1,130 @@
+####################################################################################################
+General tips to provide a good commit message:
+- https://chris.beams.io/posts/git-commit/
+- https://www.freecodecamp.org/news/writing-good-commit-messages-a-practical-guide
+
+####################################################################################################
+Common rules:
+====================================================================================================
+required:                                                                                         ||
+    [type] component: header                < max 60 characters                                   ||
+                                                                                                  ||
+optional:                                                                                         ||
+    message                                 < max 72 charecters                                   ||
+                                            < per line                                            ||
+    [ABS-xxxxx]                                                                                   ||
+====================================================================================================
+
+    type        - type of changes (see "Type of changes" below)
+    component   - name of the service component, where changes are provided.
+                  Starts with the small character. (see "Components list" below)
+
+    header      - short change description in human readable format
+                  starts with the "Action" (Add, Update, Change etc) and with
+                  the capital character.
+
+                        Add frame processing API
+                        Update units initialization
+
+                  Must NOT include: type/function/variable names like:
+                        - vf_ctx_st_t, get_some_odd_order() etc
+
+    Jira number - format [ABS-xxxxxxx] Jira id number for the feature/story etc
+    description - change description in human readable format that can include
+                  detailed description of the changes like why that was added
+                  and how it is expected to work. Some schematics might be there
+                  Different code specific names are allowed here:
+
+                    Adds following GPIO API:
+                    - set_gpio
+                    - get_gpio
+                    - do_whatever_gpio
+
+                    |___| <- this is a house without a roof where the GPIO lives
+
+####################################################################################################
+Type of changes:
+    1) Regular change (no type):
+        - module: Change description
+
+    2) Fixes
+        - [FIX] module: Change description
+
+    3) Refactoring
+        - [refactor] module: Change description
+        - [refactor 1/N] module: Change description
+
+####################################################################################################
+Component list:
+    1) vf - different changes that doesn't affect source code changes and relate for whole project:
+        - vf: Update README
+        - vf: Update uploading script
+        - vf: Update .gitignore
+
+    2) docs - changes in the docs folder:
+        - docs: Add commit message guidelines
+
+    3) build - changes in the build related files: Makefile, mk, use:
+        - build: Add build info
+        - build: Delete redundant include path
+
+    4) service - changes in service folder except units directory:
+        - service: Add memory routine API
+        - service: Add error API
+
+        4.1) buff-mgr - changes in buffer-mgr sub-directory:
+            - service: buff-mgr: Add buffer queue
+
+        4.2) core - changes in core sub-directory:
+            - service: core: Update processing unit structure
+            - service: core: Add pipeline manager types
+
+        4.3) notifier - changes in notifier sub-directory:
+            - service: notifier: Add implementation
+            - service: notifier: Update sender structure and routines
+
+        4.4) common - changes in common sub-directory:
+            - service: common: Add generic API
+
+        4.5) public-inc - changes in public-inc directory
+            - [refactor] service: public-inc: Update error header
+
+    5) units - changes in units directory:
+        5.1) common - changes in common sub-directory:
+            - units: common: Add initialization routine
+
+        5.2) c2c - changes in c2c sub-directory:
+            - units: c2c: Update initialization API
+
+        5.3) camera - changes in camera sub-directory:
+            - units: camera: Update initialization API
+
+        5.4) conv - changes in conversion sub-directory:
+            - units: conv: Update initialization API
+
+        5.5) disp - changes in display sub-directory:
+            - units: disp: Update initialization API
+
+        5.6) enc - changes in encoder sub-directory:
+            - units: enc: Update initialization API
+
+    6) client-libs - changes in client client-library directory:
+        6.1) common - changes in common sub-directory
+            - client-libs: common: Add libraries initialization routines
+        6.2) status - changes in status sub-directory
+            - client-libs: status: Add camera status obtaining
+        6.3) control - changes in control sub-directory
+            - client-libs: control: Add camera shutdown
+
+    7) libs - changes in libraries directory:
+        7.x) display, encoder, framebuffer, camera, c2c, logger
+            - [FIX] libs: display: Fix logger include path
+            - libs: encoder: Add all library files
+
+    8) clients - changes in test_clients directory:
+        8.x) display, encoder, camera, c2c
+            - clients: encoder: Add test client
+            - clients: display: Add test client
+
+####################################################################################################
+
