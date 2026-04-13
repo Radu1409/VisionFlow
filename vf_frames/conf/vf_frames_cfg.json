@@ -1,0 +1,35 @@
+{
+  "frame_sets": [
+    {
+      "name": "raw",
+      "base_path": "vf_frames/raw",
+      "format": "RAW8",
+      "frames": [
+        { "file": "frame_1.raw", "width": 1280, "height": 720 },
+        { "file": "frame_2.raw", "width": 1280, "height": 720 },
+        { "file": "frame_3.raw", "width": 1280, "height": 720 }
+      ]
+    },
+    {
+      "name": "rgb",
+      "base_path": "vf_frames/rgb",
+      "format": "RGB888",
+      "frames": [
+        { "file": "frame_1.rgb", "width": 1920, "height": 1080 },
+        { "file": "frame_2.rgb", "width": 1920, "height": 1080 },
+        { "file": "frame_3.rgb", "width": 1920, "height": 1080 }
+      ]
+    },
+    {
+      "name": "yuv",
+      "base_path": "vf_frames/yuv",
+      "format": "YUV420",
+      "frames": [
+        { "file": "frame_1.yuv", "width": 1280, "height": 720 },
+        { "file": "frame_2.yuv", "width": 1280, "height": 720 },
+        { "file": "frame_3.yuv", "width": 1280, "height": 720 }
+      ]
+    }
+  ]
+}
+
