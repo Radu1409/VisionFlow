@@ -27,6 +27,10 @@ FILE_UNIT_SRC_DIR := $(SERVICE_SRC_DIR)/units/file
 FILE_UNIT_SRC     := $(FILE_UNIT_SRC_DIR)/vf-file-unit.c
 FILE_UNIT_OBJ     := $(BUILD_DIR)/vf-file-unit.o
 
+CONVERSION_UNIT_SRC_DIR := $(SERVICE_SRC_DIR)/units/conversion
+CONVERSION_UNIT_SRC := $(CONVERSION_UNIT_SRC_DIR)/vf-conversion-unit.c
+CONVERSION_UNIT_OBJ := $(BUILD_DIR)/vf-conversion-unit.o
+
 # Dependencies
 VF_COMMON_INC_DIR := $(PROJECT_ROOT)/libraries/vf_common/public
 VF_COMMON_LIB_DIR := $(PROJECT_ROOT)/libraries/vf_common/build
@@ -44,6 +48,10 @@ VF_FILE_INC_DIR := $(PROJECT_ROOT)/libraries/vf_file/public-inc
 VF_FILE_LIB_DIR := $(PROJECT_ROOT)/libraries/vf_file/build
 VF_FILE_LIB     := $(VF_FILE_LIB_DIR)/libvf_file.a
 
+VF_CONVERSION_INC_DIR := $(PROJECT_ROOT)/libraries/vf_conversion/public
+VF_CONVERSION_LIB_DIR := $(PROJECT_ROOT)/libraries/vf_conversion/build
+VF_CONVERSION_LIB     := $(VF_CONVERSION_LIB_DIR)/libvf_conversion.a
+
 # Compiler
 CC := gcc
 CFLAGS := -Wall -Wextra -Werror \
@@ -52,18 +60,20 @@ CFLAGS := -Wall -Wextra -Werror \
           -I$(BUFFER_MGR_SRC_DIR) \
           -I$(CORE_SRC_DIR) \
           -I$(FILE_UNIT_SRC_DIR) \
+          -I$(CONVERSION_UNIT_SRC_DIR) \
           -I$(VF_COMMON_INC_DIR) \
           -I$(VF_LOGGER_INC_DIR) \
           -I$(VF_FRAMEBUFFER_INC_DIR) \
-          -I$(VF_FILE_INC_DIR)
+          -I$(VF_FILE_INC_DIR) \
+          -I$(VF_CONVERSION_INC_DIR)
 
 LDFLAGS := $(VF_COMMON_LIB) $(VF_LOGGER_LIB)
 
-.PHONY: all clean vf_common vf_logger vf_framebuffer vf_file
+.PHONY: all clean vf_common vf_logger vf_framebuffer vf_file vf_conversion
 
-all: $(BUILD_DIR) vf_common vf_logger vf_framebuffer vf_file \
+all: $(BUILD_DIR) vf_common vf_logger vf_framebuffer vf_file vf_conversion \
      $(PARSER_OBJ) $(BUFFER_MGR_OBJ) $(CORE_OBJ) \
-     $(FILE_UNIT_OBJ)
+     $(FILE_UNIT_OBJ) $(CONVERSION_UNIT_OBJ)
 
 vf_common:
 	@echo "[service] Building vf_common..."
@@ -81,6 +91,10 @@ vf_file:
 	@echo "[service] Building vf_file..."
 	$(MAKE) -C $(VF_FILE_LIB_DIR)
 
+vf_conversion:
+	@echo "[service] Building vf_conversion..."
+	$(MAKE) -C $(VF_CONVERSION_LIB_DIR)
+
 $(PARSER_OBJ): $(PARSER_SRC)
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -93,11 +107,15 @@ $(CORE_OBJ): $(CORE_SRC)
 $(FILE_UNIT_OBJ): $(FILE_UNIT_SRC)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+$(CONVERSION_UNIT_OBJ): $(CONVERSION_UNIT_SRC)
+	$(CC) $(CFLAGS) -c $< -o $@
+
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 clean:
 	@echo "[service] Cleaning dependencies..."
+	$(MAKE) -C $(VF_CONVERSION_LIB_DIR) clean
 	$(MAKE) -C $(VF_FILE_LIB_DIR) clean
 	$(MAKE) -C $(VF_FRAMEBUFFER_LIB_DIR) clean
 	$(MAKE) -C $(VF_LOGGER_LIB_DIR) clean
