@@ -20,7 +20,9 @@ BUFFER_MGR_OBJ      += $(BUILD_DIR)/vf-buff-queue.o
 # Core sources
 CORE_SRC_DIR := $(SERVICE_SRC_DIR)/core
 CORE_SRC     := $(CORE_SRC_DIR)/vf-processing-unit.c
+CORE_SRC     += $(CORE_SRC_DIR)/vf-pipeline-mgr.c
 CORE_OBJ     := $(BUILD_DIR)/vf-processing-unit.o
+CORE_OBJ     += $(BUILD_DIR)/vf-pipeline-mgr.o
 
 # Units sources
 FILE_UNIT_SRC_DIR := $(SERVICE_SRC_DIR)/units/file
