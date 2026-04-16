@@ -22,6 +22,11 @@ CORE_SRC_DIR := $(SERVICE_SRC_DIR)/core
 CORE_SRC     := $(CORE_SRC_DIR)/vf-processing-unit.c
 CORE_OBJ     := $(BUILD_DIR)/vf-processing-unit.o
 
+# Units sources
+FILE_UNIT_SRC_DIR := $(SERVICE_SRC_DIR)/units/file
+FILE_UNIT_SRC     := $(FILE_UNIT_SRC_DIR)/vf-file-unit.c
+FILE_UNIT_OBJ     := $(BUILD_DIR)/vf-file-unit.o
+
 # Dependencies
 VF_COMMON_INC_DIR := $(PROJECT_ROOT)/libraries/vf_common/public
 VF_COMMON_LIB_DIR := $(PROJECT_ROOT)/libraries/vf_common/build
@@ -35,6 +40,10 @@ VF_FRAMEBUFFER_INC_DIR := $(PROJECT_ROOT)/libraries/vf_framebuffer/public
 VF_FRAMEBUFFER_LIB_DIR := $(PROJECT_ROOT)/libraries/vf_framebuffer/build
 VF_FRAMEBUFFER_LIB     := $(VF_FRAMEBUFFER_LIB_DIR)/libvf-framebuffer.a
 
+VF_FILE_INC_DIR := $(PROJECT_ROOT)/libraries/vf_file/public-inc
+VF_FILE_LIB_DIR := $(PROJECT_ROOT)/libraries/vf_file/build
+VF_FILE_LIB     := $(VF_FILE_LIB_DIR)/libvf_file.a
+
 # Compiler
 CC := gcc
 CFLAGS := -Wall -Wextra -Werror \
@@ -42,16 +51,19 @@ CFLAGS := -Wall -Wextra -Werror \
           -I$(PARSER_SRC_DIR) \
           -I$(BUFFER_MGR_SRC_DIR) \
           -I$(CORE_SRC_DIR) \
+          -I$(FILE_UNIT_SRC_DIR) \
           -I$(VF_COMMON_INC_DIR) \
           -I$(VF_LOGGER_INC_DIR) \
-          -I$(VF_FRAMEBUFFER_INC_DIR)
+          -I$(VF_FRAMEBUFFER_INC_DIR) \
+          -I$(VF_FILE_INC_DIR)
 
 LDFLAGS := $(VF_COMMON_LIB) $(VF_LOGGER_LIB)
 
-.PHONY: all clean vf_common vf_logger vf_framebuffer
+.PHONY: all clean vf_common vf_logger vf_framebuffer vf_file
 
-all: $(BUILD_DIR) vf_common vf_logger vf_framebuffer \
-     $(PARSER_OBJ) $(BUFFER_MGR_OBJ) $(CORE_OBJ)
+all: $(BUILD_DIR) vf_common vf_logger vf_framebuffer vf_file \
+     $(PARSER_OBJ) $(BUFFER_MGR_OBJ) $(CORE_OBJ) \
+     $(FILE_UNIT_OBJ)
 
 vf_common:
 	@echo "[service] Building vf_common..."
@@ -65,6 +77,10 @@ vf_framebuffer:
 	@echo "[service] Building vf_framebuffer..."
 	$(MAKE) -C $(VF_FRAMEBUFFER_LIB_DIR)
 
+vf_file:
+	@echo "[service] Building vf_file..."
+	$(MAKE) -C $(VF_FILE_LIB_DIR)
+
 $(PARSER_OBJ): $(PARSER_SRC)
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -74,11 +90,15 @@ $(BUFFER_MGR_OBJ): $(BUFFER_MGR_SRC)
 $(CORE_OBJ): $(CORE_SRC)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+$(FILE_UNIT_OBJ): $(FILE_UNIT_SRC)
+	$(CC) $(CFLAGS) -c $< -o $@
+
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 clean:
 	@echo "[service] Cleaning dependencies..."
+	$(MAKE) -C $(VF_FILE_LIB_DIR) clean
 	$(MAKE) -C $(VF_FRAMEBUFFER_LIB_DIR) clean
 	$(MAKE) -C $(VF_LOGGER_LIB_DIR) clean
 	$(MAKE) -C $(VF_COMMON_LIB_DIR) clean
