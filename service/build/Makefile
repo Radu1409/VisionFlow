@@ -13,9 +13,14 @@ PARSER_OBJ      := $(BUILD_DIR)/vf-parser.o
 # Buffer mgr sources
 BUFFER_MGR_SRC_DIR  := $(SERVICE_SRC_DIR)/buffer-mgr
 BUFFER_MGR_SRC      := $(BUFFER_MGR_SRC_DIR)/vf-buff-pool.c
-BUFFER_MGR_SRC      := $(BUFFER_MGR_SRC_DIR)/vf-buff-queue.c
+BUFFER_MGR_SRC      += $(BUFFER_MGR_SRC_DIR)/vf-buff-queue.c
 BUFFER_MGR_OBJ      := $(BUILD_DIR)/vf-buff-pool.o
-BUFFER_MGR_OBJ      := $(BUILD_DIR)/vf-buff-queue.o
+BUFFER_MGR_OBJ      += $(BUILD_DIR)/vf-buff-queue.o
+
+# Core sources
+CORE_SRC_DIR := $(SERVICE_SRC_DIR)/core
+CORE_SRC     := $(CORE_SRC_DIR)/vf-processing-unit.c
+CORE_OBJ     := $(BUILD_DIR)/vf-processing-unit.o
 
 # Dependencies
 VF_COMMON_INC_DIR := $(PROJECT_ROOT)/libraries/vf_common/public
@@ -36,6 +41,7 @@ CFLAGS := -Wall -Wextra -Werror \
           -I$(SERVICE_INC_DIR) \
           -I$(PARSER_SRC_DIR) \
           -I$(BUFFER_MGR_SRC_DIR) \
+          -I$(CORE_SRC_DIR) \
           -I$(VF_COMMON_INC_DIR) \
           -I$(VF_LOGGER_INC_DIR) \
           -I$(VF_FRAMEBUFFER_INC_DIR)
@@ -44,7 +50,8 @@ LDFLAGS := $(VF_COMMON_LIB) $(VF_LOGGER_LIB)
 
 .PHONY: all clean vf_common vf_logger vf_framebuffer
 
-all: $(BUILD_DIR) vf_common vf_logger vf_framebuffer $(PARSER_OBJ) $(BUFFER_MGR_OBJ)
+all: $(BUILD_DIR) vf_common vf_logger vf_framebuffer \
+     $(PARSER_OBJ) $(BUFFER_MGR_OBJ) $(CORE_OBJ)
 
 vf_common:
 	@echo "[service] Building vf_common..."
@@ -62,6 +69,9 @@ $(PARSER_OBJ): $(PARSER_SRC)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUFFER_MGR_OBJ): $(BUFFER_MGR_SRC)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(CORE_OBJ): $(CORE_SRC)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR):
