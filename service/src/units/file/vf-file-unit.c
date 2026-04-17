@@ -36,7 +36,9 @@ typedef struct {
         vf_framebuffer_t    *current_fb;
         vf_fb_params_t       fb_params;
         vf_file_unit_mode_t  mode;
-        char                 file_path[256];
+        char                 file_path[VF_PARSER_MAX_FULL_PATH_LEN];
+        const vf_frame_set_t *frame_set;
+        uint32_t              frame_idx;
 } vf_file_unit_data_t;
 
 /* =========================================================================
@@ -45,12 +47,11 @@ typedef struct {
 
 vf_err_t vf_file_unit_init(void *ctx, ...)
 {
-        vf_unit_t            *unit      = NULL;
-        vf_file_unit_data_t  *data      = NULL;
-        vf_file_unit_cfg_t   *cfg       = NULL;
-        va_list               args;
-        vf_err_t              err       = VF_SUCCESS;
-        const char           *open_mode = NULL;
+        vf_unit_t           *unit = NULL;
+        vf_file_unit_data_t *data = NULL;
+        vf_file_unit_cfg_t  *cfg  = NULL;
+        vf_err_t             err  = VF_SUCCESS;
+        const char          *open_mode = NULL;
 
         if (NULL == ctx) {
                 log_err("Invalid input: ctx = %p", ctx);
@@ -59,10 +60,7 @@ vf_err_t vf_file_unit_init(void *ctx, ...)
         }
 
         unit = (vf_unit_t *)ctx;
-
-        va_start(args, ctx);
-        cfg = va_arg(args, vf_file_unit_cfg_t *);
-        va_end(args);
+        cfg  = (vf_file_unit_cfg_t *)unit->internal_data;
 
         if (NULL == cfg) {
                 log_err("Invalid input: cfg = %p", (void *)cfg);
@@ -106,6 +104,9 @@ vf_err_t vf_file_unit_init(void *ctx, ...)
                  unit->name ? unit->name : "unknown",
                  data->file_path,
                  (VF_FILE_UNIT_MODE_IN == data->mode) ? "FILE_IN" : "FILE_OUT");
+
+        data->frame_set = cfg->frame_set;
+        data->frame_idx = 0U;
 
         return VF_SUCCESS;
 }
@@ -167,7 +168,28 @@ vf_err_t vf_file_unit_get_data(void *ctx, ...)
         }
 
         if (VF_FILE_UNIT_MODE_IN == data->mode) {
-                /* Acquire buffer from pool and read frame from file */
+                char frame_path[VF_PARSER_MAX_FULL_PATH_LEN];
+
+                /* Deschide fisierul curent */
+                if (NULL != data->frame_set) {
+                        (void)snprintf(frame_path, sizeof(frame_path), "%s",
+                                    data->frame_set->frames[data->frame_idx].full_path);
+                } else {
+                        (void)snprintf(frame_path, sizeof(frame_path), "%s", data->file_path);
+                }
+
+                /* Inchide fisierul anterior daca e deschis */
+                if (1 == data->file.is_open) {
+                        (void)vf_file_close(&data->file);
+                }
+
+                err = vf_file_open(&data->file, frame_path, "rb");
+                if (VF_SUCCESS != err) {
+                        log_err("Failed to open frame file '%s': %s", frame_path, vf_err2str(err));
+
+                        return err;
+                }
+
                 err = vf_buf_pool_acquire(data->pool, &data->current_fb);
                 if (VF_SUCCESS != err) {
                         log_err("Failed to acquire buffer from pool: %s", vf_err2str(err));
@@ -175,20 +197,19 @@ vf_err_t vf_file_unit_get_data(void *ctx, ...)
                         return err;
                 }
 
-                err = vf_framebuffer_read_from_fptr(data->current_fb,
-                                                    data->file.fp,
-                                                    &read);
+                err = vf_framebuffer_read_from_fptr(data->current_fb, data->file.fp, &read);
                 if (VF_SUCCESS != err) {
                         log_err("Failed to read frame from file: %s", vf_err2str(err));
 
                         (void)vf_buf_pool_release(data->pool, data->current_fb);
-
                         data->current_fb = NULL;
 
                         return err;
                 }
 
-                log_dbg("FILE_IN: read %zu bytes from '%s'", read, data->file_path);
+                data->frame_idx++;
+
+                log_dbg("FILE_IN: read %zu bytes from '%s'", read, frame_path);
         } else {
                 /* FILE_OUT: pop frame from in_queue */
                 if (NULL == unit->in_queue) {
@@ -274,15 +295,21 @@ vf_err_t vf_file_unit_send_data(void *ctx, ...)
                 log_dbg("FILE_IN: frame pushed to out_queue");
 
         } else {
-                /* Write frame to file then release back to pool */
                 err = vf_framebuffer_write_to_fptr(data->current_fb,
-                                                   data->file.fp,
-                                                   &written);
+                                                data->file.fp,
+                                                &written);
                 if (VF_SUCCESS != err) {
                         log_err("Failed to write frame to file: %s", vf_err2str(err));
                 }
 
                 log_dbg("FILE_OUT: wrote %zu bytes to '%s'", written, data->file_path);
+
+                /* ← ADAUGAT: elibereaza frame-ul inapoi in pool dupa scriere */
+                if (NULL != data->pool) {
+                        (void)vf_buf_pool_release(data->pool, data->current_fb);
+                }
+
+                data->current_fb = NULL;
         }
 
         data->current_fb = NULL;

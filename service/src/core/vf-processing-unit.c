@@ -23,23 +23,23 @@
 
 #define MODULE_NAME "vf_processing_unit"
 
-static
-vf_err_t set_unit_operations(vf_unit_t *unit)
-{
-        if (NULL == unit) {
-                log_err("Invalid input: unit = %p", (void *)unit);
+// static
+// vf_err_t set_unit_operations(vf_unit_t *unit)
+// {
+//         if (NULL == unit) {
+//                 log_err("Invalid input: unit = %p", (void *)unit);
 
-                return VF_INVALID_PARAMETER;
-        }
+//                 return VF_INVALID_PARAMETER;
+//         }
 
-        unit->operations.init         = NULL;
-        unit->operations.deinit       = NULL;
-        unit->operations.get_data     = NULL;
-        unit->operations.process_data = NULL;
-        unit->operations.send_data    = NULL;
+//         unit->operations.init         = NULL;
+//         unit->operations.deinit       = NULL;
+//         unit->operations.get_data     = NULL;
+//         unit->operations.process_data = NULL;
+//         unit->operations.send_data    = NULL;
 
-        return VF_SUCCESS;
-}
+//         return VF_SUCCESS;
+// }
 
 vf_err_t vf_unit_create(vf_unit_t *unit)
 {
@@ -55,13 +55,13 @@ vf_err_t vf_unit_create(vf_unit_t *unit)
                  unit->name ? unit->name : "unknown",
                  vf_unit_type_str(unit->type));
 
-        err = set_unit_operations(unit);
-        if (VF_SUCCESS != err) {
-                log_err("Failed to set default operations for unit '%s'",
-                        unit->name ? unit->name : "unknown");
+        // err = set_unit_operations(unit);
+        // if (VF_SUCCESS != err) {
+        //         log_err("Failed to set default operations for unit '%s'",
+        //                 unit->name ? unit->name : "unknown");
 
-                return err;
-        }
+        //         return err;
+        // }
 
         if (NULL == unit->operations.init) {
                 log_err("Unit '%s' has no init operation — call init_operations first",

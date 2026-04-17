@@ -21,6 +21,7 @@
 #include "vf-buff-pool.h"
 #include "vf-error.h"
 #include "vf-framebuffer.h"
+#include "vf-parser.h"
 #include "vf-unit-operations.h"
 
 #ifdef __cplusplus
@@ -33,7 +34,8 @@ typedef enum {
 } vf_file_unit_mode_t;
 
 typedef struct {
-        char                 file_path[256];
+        const vf_frame_set_t *frame_set;
+        char                 file_path[VF_PARSER_MAX_FULL_PATH_LEN];
         vf_fb_params_t       fb_params;
         vf_buf_pool_t       *pool;
         vf_file_unit_mode_t  mode;
