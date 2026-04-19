@@ -33,6 +33,7 @@
 typedef struct {
         vf_conversion_ctx_t  conv_ctx;
         vf_buf_pool_t       *pool;
+        vf_buf_pool_t       *src_pool;
         vf_framebuffer_t    *in_fb;
         vf_framebuffer_t    *out_fb;
         vf_fb_params_t       dst_params;
@@ -44,11 +45,10 @@ typedef struct {
 
 vf_err_t vf_conversion_unit_init(void *ctx, ...)
 {
-        vf_unit_t                  *unit = NULL;
-        vf_conversion_unit_data_t  *data = NULL;
-        vf_conversion_unit_cfg_t   *cfg  = NULL;
-        va_list                     args;
-        vf_err_t                    err  = VF_SUCCESS;
+        vf_unit_t                 *unit = NULL;
+        vf_conversion_unit_data_t *data = NULL;
+        vf_conversion_unit_cfg_t  *cfg  = NULL;
+        vf_err_t                   err  = VF_SUCCESS;
 
         if (NULL == ctx) {
                 log_err("Invalid input: ctx = %p", ctx);
@@ -57,10 +57,7 @@ vf_err_t vf_conversion_unit_init(void *ctx, ...)
         }
 
         unit = (vf_unit_t *)ctx;
-
-        va_start(args, ctx);
-        cfg = va_arg(args, vf_conversion_unit_cfg_t *);
-        va_end(args);
+        cfg  = (vf_conversion_unit_cfg_t *)unit->internal_data;
 
         if (NULL == cfg) {
                 log_err("Invalid input: cfg = %p", (void *)cfg);
@@ -91,6 +88,7 @@ vf_err_t vf_conversion_unit_init(void *ctx, ...)
         }
 
         data->pool       = cfg->pool;
+        data->src_pool   = cfg->src_pool;
         data->dst_params = cfg->dst_params;
 
         unit->internal_data = data;
@@ -123,8 +121,15 @@ vf_err_t vf_conversion_unit_deinit(void *ctx, ...)
 
         vf_conversion_deinit(&data->conv_ctx);
 
+        if ((NULL != data->in_fb) && (NULL != data->src_pool)) {
+                (void)vf_buf_pool_release(data->src_pool, data->in_fb);
+
+                data->in_fb = NULL;
+        }
+
         if ((NULL != data->out_fb) && (NULL != data->pool)) {
                 (void)vf_buf_pool_release(data->pool, data->out_fb);
+
                 data->out_fb = NULL;
         }
 
@@ -276,6 +281,12 @@ vf_err_t vf_conversion_unit_send_data(void *ctx, ...)
                 data->out_fb = NULL;
 
                 return err;
+        }
+
+        if (NULL != data->in_fb) {
+                (void)vf_buf_pool_release(data->src_pool, data->in_fb);
+
+                data->in_fb = NULL;
         }
 
         data->out_fb = NULL;
