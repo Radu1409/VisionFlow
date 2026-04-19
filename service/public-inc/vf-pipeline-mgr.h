@@ -20,7 +20,7 @@
 
 #include <stdint.h>
 
-#include "vf-buf-queue.h"
+#include "vf-buff-queue.h"
 #include "vf-error.h"
 #include "vf-processing-unit.h"
 
