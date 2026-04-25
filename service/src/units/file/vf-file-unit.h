@@ -34,11 +34,14 @@ typedef enum {
 } vf_file_unit_mode_t;
 
 typedef struct {
-        const vf_frame_set_t *frame_set;
-        char                 file_path[VF_PARSER_MAX_FULL_PATH_LEN];
-        vf_fb_params_t       fb_params;
-        vf_buf_pool_t       *pool;
-        vf_file_unit_mode_t  mode;
+        const vf_frame_set_t  *frame_set;
+        char                  file_path[VF_PARSER_MAX_FULL_PATH_LEN];
+        char                  output_dir[VF_PARSER_MAX_FULL_PATH_LEN];
+        const char            *output_extension;
+        vf_fb_params_t        fb_params;
+        vf_buf_pool_t         *pool;
+        vf_file_unit_mode_t   mode;
+        int                   split_output;
 } vf_file_unit_cfg_t;
 
 vf_err_t vf_file_unit_init(void *ctx, ...);

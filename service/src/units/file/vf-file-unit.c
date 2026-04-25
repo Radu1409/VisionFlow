@@ -29,16 +29,20 @@
 #include "vf-processing-unit.h"
 
 #define MODULE_NAME "vf_file_unit"
+#define VF_FILE_UNIT_OUT_PATH_MAX 1024U
 
 typedef struct {
-        vf_file_t            file;
-        vf_buf_pool_t       *pool;
-        vf_framebuffer_t    *current_fb;
-        vf_fb_params_t       fb_params;
-        vf_file_unit_mode_t  mode;
-        char                 file_path[VF_PARSER_MAX_FULL_PATH_LEN];
-        const vf_frame_set_t *frame_set;
+        vf_file_t             file;
+        vf_buf_pool_t         *pool;
+        vf_framebuffer_t      *current_fb;
+        vf_fb_params_t        fb_params;
+        vf_file_unit_mode_t   mode;
+        char                  file_path[VF_PARSER_MAX_FULL_PATH_LEN];
+        char                  output_dir[VF_PARSER_MAX_FULL_PATH_LEN];
+        char                  output_extension[16];
+        const vf_frame_set_t  *frame_set;
         uint32_t              frame_idx;
+        int                   split_output;
 } vf_file_unit_data_t;
 
 /* =========================================================================
@@ -51,7 +55,6 @@ vf_err_t vf_file_unit_init(void *ctx, ...)
         vf_file_unit_data_t *data = NULL;
         vf_file_unit_cfg_t  *cfg  = NULL;
         vf_err_t             err  = VF_SUCCESS;
-        const char          *open_mode = NULL;
 
         if (NULL == ctx) {
                 log_err("Invalid input: ctx = %p", ctx);
@@ -83,30 +86,59 @@ vf_err_t vf_file_unit_init(void *ctx, ...)
 
         (void)snprintf(data->file_path, sizeof(data->file_path), "%s", cfg->file_path);
 
-        data->fb_params = cfg->fb_params;
-        data->pool      = cfg->pool;
-        data->mode      = cfg->mode;
+        data->fb_params    = cfg->fb_params;
+        data->pool         = cfg->pool;
+        data->mode         = cfg->mode;
+        data->frame_set    = cfg->frame_set;
+        data->frame_idx    = 0U;
+        data->split_output = cfg->split_output;
 
-        open_mode = (VF_FILE_UNIT_MODE_IN == cfg->mode) ? "rb" : "wb";
+        if (NULL != cfg->output_dir) {
+                (void)snprintf(data->output_dir, sizeof(data->output_dir),
+                               "%s", cfg->output_dir);
+        }
 
-        err = vf_file_open(&data->file, data->file_path, open_mode);
-        if (VF_SUCCESS != err) {
-                log_err("Failed to open file '%s': %s", data->file_path, vf_err2str(err));
+        if (NULL != cfg->output_extension) {
+                (void)snprintf(data->output_extension, sizeof(data->output_extension),
+                               "%s", cfg->output_extension);
+        }
 
-                free(data);
+        if (VF_FILE_UNIT_MODE_IN == cfg->mode) {
+                /* FILE_IN — open the first file at init */
+                err = vf_file_open(&data->file, data->file_path, "rb");
+                if (VF_SUCCESS != err) {
+                        log_err("Failed to open file '%s': %s",
+                                data->file_path, vf_err2str(err));
 
-                return err;
+                        free(data);
+
+                        return err;
+                }
+        } else {
+                /* FILE_OUT
+                 *   - concat mode: open the single output file once at init
+                 *   - split mode: defer opening until each frame is written
+                 */
+                if (0 == data->split_output) {
+                        err = vf_file_open(&data->file, data->file_path, "wb");
+                        if (VF_SUCCESS != err) {
+                                log_err("Failed to open file '%s': %s",
+                                        data->file_path, vf_err2str(err));
+
+                                free(data);
+
+                                return err;
+                        }
+                }
         }
 
         unit->internal_data = data;
 
-        log_info("File unit '%s' initialized: path='%s' mode=%s",
+        log_info("File unit '%s' initialized: path='%s' mode=%s split=%d",
                  unit->name ? unit->name : "unknown",
                  data->file_path,
-                 (VF_FILE_UNIT_MODE_IN == data->mode) ? "FILE_IN" : "FILE_OUT");
-
-        data->frame_set = cfg->frame_set;
-        data->frame_idx = 0U;
+                 (VF_FILE_UNIT_MODE_IN == data->mode) ? "FILE_IN" : "FILE_OUT",
+                 data->split_output);
 
         return VF_SUCCESS;
 }
@@ -147,8 +179,8 @@ vf_err_t vf_file_unit_deinit(void *ctx, ...)
 
 vf_err_t vf_file_unit_get_data(void *ctx, ...)
 {
-        vf_unit_t           *unit = NULL;
-        vf_file_unit_data_t *data = NULL;
+        vf_unit_t            *unit = NULL;
+        vf_file_unit_data_t  *data = NULL;
         vf_err_t             err  = VF_SUCCESS;
         size_t               read = 0U;
 
@@ -238,13 +270,13 @@ vf_err_t vf_file_unit_process_data(void *ctx, ...)
 
         return VF_SUCCESS;
 }
-
 vf_err_t vf_file_unit_send_data(void *ctx, ...)
 {
-        vf_unit_t           *unit    = NULL;
-        vf_file_unit_data_t *data    = NULL;
+        vf_unit_t            *unit    = NULL;
+        vf_file_unit_data_t  *data    = NULL;
         vf_err_t             err     = VF_SUCCESS;
         size_t               written = 0U;
+        char out_path[VF_FILE_UNIT_OUT_PATH_MAX] = {0};
 
         if (NULL == ctx) {
                 log_err("Invalid input: ctx = %p", ctx);
@@ -293,23 +325,72 @@ vf_err_t vf_file_unit_send_data(void *ctx, ...)
                 }
 
                 log_dbg("FILE_IN: frame pushed to out_queue");
-
         } else {
+                /* FILE_OUT
+                 *   - split mode: open a new file per frame
+                 *   - concat mode: write to the already-open file
+                 */
+                if (1 == data->split_output) {
+                        if (NULL != data->frame_set) {
+                                const char *frame_name =
+                                        data->frame_set->frames[data->frame_idx].file_name;
+                                char base_name[128] = {0};
+                                char       *dot            = NULL;
+
+                                (void)snprintf(base_name, sizeof(base_name), "%s", frame_name);
+
+                                dot = strrchr(base_name, '.');
+                                if (NULL != dot) {
+                                        *dot = '\0';
+                                }
+
+                                (void)snprintf(out_path, sizeof(out_path), "%s/%s%s",
+                                               data->output_dir,
+                                               base_name,
+                                               data->output_extension);
+                        } else {
+                                (void)snprintf(out_path, sizeof(out_path), "%s/frame_%u%s",
+                                               data->output_dir,
+                                               data->frame_idx + 1U,
+                                               data->output_extension);
+                        }
+
+                        if (1 == data->file.is_open) {
+                                (void)vf_file_close(&data->file);
+                        }
+
+                        err = vf_file_open(&data->file, out_path, "wb");
+                        if (VF_SUCCESS != err) {
+                                log_err("Failed to open output file '%s': %s",
+                                        out_path, vf_err2str(err));
+
+                                if (NULL != data->pool) {
+                                        (void)vf_buf_pool_release(data->pool, data->current_fb);
+                                }
+
+                                data->current_fb = NULL;
+
+                                return err;
+                        }
+                }
+
                 err = vf_framebuffer_write_to_fptr(data->current_fb,
-                                                data->file.fp,
-                                                &written);
+                                                    data->file.fp,
+                                                    &written);
                 if (VF_SUCCESS != err) {
                         log_err("Failed to write frame to file: %s", vf_err2str(err));
                 }
 
-                log_dbg("FILE_OUT: wrote %zu bytes to '%s'", written, data->file_path);
+                log_dbg("FILE_OUT: wrote %zu bytes to '%s'",
+                        written,
+                        (1 == data->split_output) ? out_path : data->file_path);
 
-                /* Free the frame back into the pool after written */
                 if (NULL != data->pool) {
                         (void)vf_buf_pool_release(data->pool, data->current_fb);
                 }
 
                 data->current_fb = NULL;
+                data->frame_idx++;
         }
 
         data->current_fb = NULL;

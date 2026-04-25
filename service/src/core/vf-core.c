@@ -196,6 +196,8 @@ vf_err_t vf_core_run(void)
         file_out_cfg.fb_params = params_out;
         file_out_cfg.pool      = &pool_out;
         file_out_cfg.mode      = VF_FILE_UNIT_MODE_OUT;
+        file_out_cfg.split_output     = 0;
+        file_out_cfg.output_extension = ".yuv";
 
         file_out_unit.type = VF_UNIT_TYPE_FILE_OUT;
         file_out_unit.name = "file_out";
