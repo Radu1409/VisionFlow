@@ -1,0 +1,10 @@
+# IDE
+.vscode/
+
+# Build artifacts
+libraries/*/build/*.a
+libraries/*/build/*.o
+service/build/*.o
+service/build/vf_service
+
+
