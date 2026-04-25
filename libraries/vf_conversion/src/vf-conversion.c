@@ -124,6 +124,89 @@ int validate_framebuffers(const vf_framebuffer_t *src, const vf_framebuffer_t *d
 }
 
 /* =========================================================================
+ * RAW8 -> RGB888
+ * ========================================================================= */
+
+static
+vf_err_t convert_raw8_to_rgb888(const vf_framebuffer_t *src, vf_framebuffer_t *dst)
+{
+        const uint8_t *src_row = NULL;
+        uint8_t       *dst_row = NULL;
+        uint32_t       width   = 0U;
+        uint32_t       height  = 0U;
+        uint32_t       x       = 0U;
+        uint32_t       y       = 0U;
+        uint8_t        pixel   = 0U;
+
+        if (0 != validate_framebuffers(src, dst)) {
+                return VF_CONV_PROCESSING_ERR;
+        }
+
+        width  = src->params.width;
+        height = src->params.height;
+
+        for (y = 0U; y < height; y++) {
+                src_row = src->data + y * src->plane_stride[0];
+                dst_row = dst->data + y * dst->plane_stride[0];
+
+                for (x = 0U; x < width; x++) {
+                        pixel = src_row[x];
+
+                        dst_row[x * 3U + 0U] = pixel;
+                        dst_row[x * 3U + 1U] = pixel;
+                        dst_row[x * 3U + 2U] = pixel;
+                }
+        }
+
+        log_dbg("RAW8 -> RGB888: %ux%u", width, height);
+
+        return VF_SUCCESS;
+}
+
+/* =========================================================================
+ * RAW8 -> YUV420P
+ * ========================================================================= */
+
+static
+vf_err_t convert_raw8_to_yuv420p(const vf_framebuffer_t *src, vf_framebuffer_t *dst)
+{
+        const uint8_t *src_row = NULL;
+        uint8_t       *y_row   = NULL;
+        uint8_t       *u_plane = NULL;
+        uint8_t       *v_plane = NULL;
+        uint32_t       width   = 0U;
+        uint32_t       height  = 0U;
+        uint32_t       x       = 0U;
+        uint32_t       y       = 0U;
+
+        if (0 != validate_framebuffers(src, dst)) {
+                return VF_CONV_PROCESSING_ERR;
+        }
+
+        width   = src->params.width;
+        height  = src->params.height;
+        u_plane = dst->data + dst->plane_size[0];
+        v_plane = u_plane   + dst->plane_size[1];
+
+        /* Fill U and V planes with 128 (neutral chroma for grayscale) */
+        (void)memset(u_plane, 128U, dst->plane_size[1]);
+        (void)memset(v_plane, 128U, dst->plane_size[2]);
+
+        for (y = 0U; y < height; y++) {
+                src_row = src->data + y * src->plane_stride[0];
+                y_row   = dst->data + y * dst->plane_stride[0];
+
+                for (x = 0U; x < width; x++) {
+                        y_row[x] = src_row[x];
+                }
+        }
+
+        log_dbg("RAW8 -> YUV420P: %ux%u", width, height);
+
+        return VF_SUCCESS;
+}
+
+/* =========================================================================
  * RGB888 -> YUV420P
  * ========================================================================= */
 
@@ -408,6 +491,8 @@ static const vf_conversion_entry_t g_conversion_table[] = {
         { VF_PIXEL_FMT_YUV420P, VF_PIXEL_FMT_RGB888,  convert_yuv420p_to_rgb888 },
         { VF_PIXEL_FMT_RGB888,  VF_PIXEL_FMT_NV12,    convert_rgb888_to_nv12    },
         { VF_PIXEL_FMT_NV12,    VF_PIXEL_FMT_RGB888,  convert_nv12_to_rgb888    },
+        { VF_PIXEL_FMT_RAW8,    VF_PIXEL_FMT_RGB888,  convert_raw8_to_rgb888    },
+        { VF_PIXEL_FMT_RAW8,    VF_PIXEL_FMT_YUV420P, convert_raw8_to_yuv420p   },
 };
 
 #define CONVERSION_TABLE_SIZE \
