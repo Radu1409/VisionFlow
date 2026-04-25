@@ -23,7 +23,8 @@
 extern "C" {
 #endif
 
-vf_err_t vf_core_run(void);
+vf_err_t vf_core_run_all(void);
+vf_err_t vf_core_run_by_flag(const char *flag);
 
 #ifdef __cplusplus
 }
