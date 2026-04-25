@@ -5,6 +5,9 @@ SERVICE_SRC_DIR := $(PROJECT_ROOT)/service/src
 SERVICE_INC_DIR := $(PROJECT_ROOT)/service/public-inc
 BUILD_DIR       := $(PROJECT_ROOT)/service/build
 
+# Output frames base directory
+OUT_BASE := $(PROJECT_ROOT)/vf_frames/out
+
 # Parser sources
 PARSER_SRC_DIR  := $(SERVICE_SRC_DIR)/parser
 PARSER_SRC      := $(PARSER_SRC_DIR)/vf-parser.c
@@ -36,8 +39,8 @@ FILE_UNIT_SRC     := $(FILE_UNIT_SRC_DIR)/vf-file-unit.c
 FILE_UNIT_OBJ     := $(BUILD_DIR)/vf-file-unit.o
 
 CONVERSION_UNIT_SRC_DIR := $(SERVICE_SRC_DIR)/units/conversion
-CONVERSION_UNIT_SRC := $(CONVERSION_UNIT_SRC_DIR)/vf-conversion-unit.c
-CONVERSION_UNIT_OBJ := $(BUILD_DIR)/vf-conversion-unit.o
+CONVERSION_UNIT_SRC     := $(CONVERSION_UNIT_SRC_DIR)/vf-conversion-unit.c
+CONVERSION_UNIT_OBJ     := $(BUILD_DIR)/vf-conversion-unit.o
 
 # Dependencies
 VF_COMMON_INC_DIR := $(PROJECT_ROOT)/libraries/vf_common/public
@@ -80,12 +83,21 @@ CFLAGS := -Wall -Wextra -Werror \
 
 LDFLAGS := $(VF_COMMON_LIB) $(VF_LOGGER_LIB)
 
-.PHONY: all clean run vf_common vf_logger vf_framebuffer vf_file vf_conversion
+.PHONY: all clean run vf_common vf_logger vf_framebuffer vf_file vf_conversion \
+        run-rgb_to_yuv_concat run-rgb_to_yuv_split \
+        run-yuv_to_rgb_concat run-yuv_to_rgb_split \
+        run-raw_to_rgb_concat run-raw_to_rgb_split \
+        run-raw_to_yuv_concat run-raw_to_yuv_split \
+        clean-rgb_to_yuv_concat clean-rgb_to_yuv_split \
+        clean-yuv_to_rgb_concat clean-yuv_to_rgb_split \
+        clean-raw_to_rgb_concat clean-raw_to_rgb_split \
+        clean-raw_to_yuv_concat clean-raw_to_yuv_split \
+        clean-all-scenarios
 
 all: $(BUILD_DIR) vf_common vf_logger vf_framebuffer vf_file vf_conversion \
      $(PARSER_OBJ) $(BUFFER_MGR_OBJ) $(CORE_OBJ) \
      $(FILE_UNIT_OBJ) $(CONVERSION_UNIT_OBJ) \
-	 $(MAIN_OBJ) $(TARGET)
+     $(MAIN_OBJ) $(TARGET)
 
 vf_common:
 	@echo "[service] Building vf_common..."
@@ -150,7 +162,31 @@ $(TARGET): $(PARSER_OBJ) $(BUFFER_MGR_OBJ) $(CORE_OBJ) \
 	@echo "[service] Built $(TARGET)"
 
 run: all
-	cd $(PROJECT_ROOT) && ./service/build/vf_service
+	cd $(PROJECT_ROOT) && ./service/build/vf_service --all
+
+run-rgb_to_yuv_concat: all
+	cd $(PROJECT_ROOT) && ./service/build/vf_service --rgb_to_yuv_concat
+
+run-rgb_to_yuv_split: all
+	cd $(PROJECT_ROOT) && ./service/build/vf_service --rgb_to_yuv_split
+
+run-yuv_to_rgb_concat: all
+	cd $(PROJECT_ROOT) && ./service/build/vf_service --yuv_to_rgb_concat
+
+run-yuv_to_rgb_split: all
+	cd $(PROJECT_ROOT) && ./service/build/vf_service --yuv_to_rgb_split
+
+run-raw_to_rgb_concat: all
+	cd $(PROJECT_ROOT) && ./service/build/vf_service --raw_to_rgb_concat
+
+run-raw_to_rgb_split: all
+	cd $(PROJECT_ROOT) && ./service/build/vf_service --raw_to_rgb_split
+
+run-raw_to_yuv_concat: all
+	cd $(PROJECT_ROOT) && ./service/build/vf_service --raw_to_yuv_concat
+
+run-raw_to_yuv_split: all
+	cd $(PROJECT_ROOT) && ./service/build/vf_service --raw_to_yuv_split
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
@@ -165,4 +201,39 @@ clean:
 	rm -f $(BUILD_DIR)/*.o
 	rm -f $(TARGET)
 	@echo "[service] clean done."
+
+clean-rgb_to_yuv_concat:
+	rm -f $(OUT_BASE)/rgb_to_yuv_concat/*
+
+clean-rgb_to_yuv_split:
+	rm -f $(OUT_BASE)/rgb_to_yuv_split/*
+
+clean-yuv_to_rgb_concat:
+	rm -f $(OUT_BASE)/yuv_to_rgb_concat/*
+
+clean-yuv_to_rgb_split:
+	rm -f $(OUT_BASE)/yuv_to_rgb_split/*
+
+clean-raw_to_rgb_concat:
+	rm -f $(OUT_BASE)/raw_to_rgb_concat/*
+
+clean-raw_to_rgb_split:
+	rm -f $(OUT_BASE)/raw_to_rgb_split/*
+
+clean-raw_to_yuv_concat:
+	rm -f $(OUT_BASE)/raw_to_yuv_concat/*
+
+clean-raw_to_yuv_split:
+	rm -f $(OUT_BASE)/raw_to_yuv_split/*
+
+clean-all-scenarios:
+	rm -f $(OUT_BASE)/rgb_to_yuv_concat/*
+	rm -f $(OUT_BASE)/rgb_to_yuv_split/*
+	rm -f $(OUT_BASE)/yuv_to_rgb_concat/*
+	rm -f $(OUT_BASE)/yuv_to_rgb_split/*
+	rm -f $(OUT_BASE)/raw_to_rgb_concat/*
+	rm -f $(OUT_BASE)/raw_to_rgb_split/*
+	rm -f $(OUT_BASE)/raw_to_yuv_concat/*
+	rm -f $(OUT_BASE)/raw_to_yuv_split/*
+	@echo "[service] All scenario outputs cleaned."
 
