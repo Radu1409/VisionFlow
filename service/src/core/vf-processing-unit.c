@@ -37,6 +37,16 @@ vf_err_t vf_unit_create(vf_unit_t *unit)
                  unit->name ? unit->name : "unknown",
                  vf_unit_type_str(unit->type));
 
+        err = vf_notifier_init(&unit->notifier, 
+                               unit->name ? unit->name : "unknown",
+                               VF_NOTIFIER_MODE_BIDIRECTIONAL);
+        if (VF_SUCCESS != err) {
+                log_err("Failed to init notifier for unit '%s'",
+                        unit->name ? unit->name : "unknown");
+
+                return err;
+        }
+
         if (NULL == unit->operations.init) {
                 log_err("Unit '%s' has no init operation — call init_operations first",
                         unit->name ? unit->name : "unknown");
@@ -49,6 +59,8 @@ vf_err_t vf_unit_create(vf_unit_t *unit)
                 log_err("Unit '%s' init failed: %s",
                         unit->name ? unit->name : "unknown",
                         vf_err2str(err));
+                
+                (void)vf_notifier_deinit(&unit->notifier);
 
                 return err;
         }
@@ -82,6 +94,8 @@ void vf_unit_destroy(vf_unit_t *unit)
         unit->in_queue      = NULL;
         unit->out_queue     = NULL;
         unit->internal_data = NULL;
+        
+        (void)vf_notifier_deinit(&unit->notifier);
 
         log_info("Unit '%s' destroyed", unit->name ? unit->name : "unknown");
 }

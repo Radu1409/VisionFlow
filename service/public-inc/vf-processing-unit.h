@@ -23,6 +23,7 @@
 
 #include "vf-buff-queue.h"
 #include "vf-error.h"
+#include "vf-notifier.h"
 #include "vf-unit-operations.h"
 
 #ifdef __cplusplus
@@ -52,6 +53,8 @@ typedef struct vf_unit {
         void                *internal_data;
 
         int                  initialized;
+
+        vf_notifier_t        notifier;
 } vf_unit_t;
 
 vf_err_t vf_unit_create(vf_unit_t *unit);
