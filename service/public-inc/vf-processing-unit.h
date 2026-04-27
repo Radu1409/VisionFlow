@@ -41,6 +41,14 @@ typedef enum {
         VF_UNIT_TYPE_MAX
 } vf_unit_type_t;
 
+typedef struct {
+        uint64_t total_get_data_ms;
+        uint64_t total_process_data_ms;
+        uint64_t total_send_data_ms;
+        uint64_t total_ms;
+        uint32_t frames_processed;
+} vf_unit_stats_t;
+
 typedef struct vf_unit {
         vf_unit_type_t       type;
         const char          *name;
@@ -55,6 +63,8 @@ typedef struct vf_unit {
         int                  initialized;
 
         vf_notifier_t        notifier;
+
+        vf_unit_stats_t      stats;
 } vf_unit_t;
 
 vf_err_t vf_unit_create(vf_unit_t *unit);

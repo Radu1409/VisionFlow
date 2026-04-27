@@ -16,12 +16,23 @@
  */
 
 #include <string.h>
+#include <time.h>
 
 #include "vf-error.h"
 #include "vf-logger.h"
 #include "vf-processing-unit.h"
 
 #define MODULE_NAME "vf_processing_unit"
+
+static
+uint64_t get_time_ms(void)
+{
+        struct timespec ts = { 0 };
+
+        (void)clock_gettime(CLOCK_MONOTONIC, &ts);
+
+        return (uint64_t)(ts.tv_sec * 1000ULL + ts.tv_nsec / 1000000ULL);
+}
 
 vf_err_t vf_unit_create(vf_unit_t *unit)
 {
@@ -86,6 +97,19 @@ void vf_unit_destroy(vf_unit_t *unit)
 
         log_info("Destroying unit '%s'", unit->name ? unit->name : "unknown");
 
+        if (0U < unit->stats.frames_processed) {
+                uint32_t n = unit->stats.frames_processed;
+
+                log_info("Unit '%s' stats: frames=%u "
+                         "avg_get=%llums avg_process=%llums avg_send=%llums avg_total=%llums",
+                         unit->name ? unit->name : "unknown",
+                         n,
+                         (unsigned long long)(unit->stats.total_get_data_ms     / n),
+                         (unsigned long long)(unit->stats.total_process_data_ms / n),
+                         (unsigned long long)(unit->stats.total_send_data_ms    / n),
+                         (unsigned long long)(unit->stats.total_ms              / n));
+        }
+
         if (NULL != unit->operations.deinit) {
                 unit->operations.deinit(unit);
         }
@@ -94,7 +118,7 @@ void vf_unit_destroy(vf_unit_t *unit)
         unit->in_queue      = NULL;
         unit->out_queue     = NULL;
         unit->internal_data = NULL;
-        
+
         (void)vf_notifier_deinit(&unit->notifier);
 
         log_info("Unit '%s' destroyed", unit->name ? unit->name : "unknown");
@@ -102,7 +126,11 @@ void vf_unit_destroy(vf_unit_t *unit)
 
 vf_err_t vf_unit_run(vf_unit_t *unit)
 {
-        vf_err_t err = VF_SUCCESS;
+        vf_err_t err    = VF_SUCCESS;
+        uint64_t t0     = 0U;
+        uint64_t get_ms = 0U;
+        uint64_t prc_ms = 0U;
+        uint64_t snd_ms = 0U;
 
         if (NULL == unit) {
                 log_err("Invalid input: unit = %p", (void *)unit);
@@ -116,10 +144,11 @@ vf_err_t vf_unit_run(vf_unit_t *unit)
                 return VF_INIT_FAILED;
         }
 
-        /* get_data → process_data → send_data */
-
         if (NULL != unit->operations.get_data) {
-                err = unit->operations.get_data(unit);
+                t0     = get_time_ms();
+                err    = unit->operations.get_data(unit);
+                get_ms = get_time_ms() - t0;
+
                 if (VF_SUCCESS != err) {
                         log_err("Unit '%s' get_data failed: %s",
                                 unit->name ? unit->name : "unknown",
@@ -130,7 +159,10 @@ vf_err_t vf_unit_run(vf_unit_t *unit)
         }
 
         if (NULL != unit->operations.process_data) {
-                err = unit->operations.process_data(unit);
+                t0     = get_time_ms();
+                err    = unit->operations.process_data(unit);
+                prc_ms = get_time_ms() - t0;
+
                 if (VF_SUCCESS != err) {
                         log_err("Unit '%s' process_data failed: %s",
                                 unit->name ? unit->name : "unknown",
@@ -141,7 +173,10 @@ vf_err_t vf_unit_run(vf_unit_t *unit)
         }
 
         if (NULL != unit->operations.send_data) {
-                err = unit->operations.send_data(unit);
+                t0     = get_time_ms();
+                err    = unit->operations.send_data(unit);
+                snd_ms = get_time_ms() - t0;
+
                 if (VF_SUCCESS != err) {
                         log_err("Unit '%s' send_data failed: %s",
                                 unit->name ? unit->name : "unknown",
@@ -150,6 +185,21 @@ vf_err_t vf_unit_run(vf_unit_t *unit)
                         return err;
                 }
         }
+
+        unit->stats.total_get_data_ms     += get_ms;
+        unit->stats.total_process_data_ms += prc_ms;
+        unit->stats.total_send_data_ms    += snd_ms;
+        unit->stats.total_ms              += get_ms + prc_ms + snd_ms;
+        unit->stats.frames_processed++;
+
+        log_dbg("Unit '%s'"
+                "[frame = %u get = %llums process = %llums send = %llums total = %llums]",
+                unit->name ? unit->name : "unknown",
+                unit->stats.frames_processed,
+                (unsigned long long)get_ms,
+                (unsigned long long)prc_ms,
+                (unsigned long long)snd_ms,
+                (unsigned long long)(get_ms + prc_ms + snd_ms));
 
         return VF_SUCCESS;
 }
