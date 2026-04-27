@@ -63,6 +63,10 @@ VF_CONVERSION_INC_DIR := $(PROJECT_ROOT)/libraries/vf_conversion/public
 VF_CONVERSION_LIB_DIR := $(PROJECT_ROOT)/libraries/vf_conversion/build
 VF_CONVERSION_LIB     := $(VF_CONVERSION_LIB_DIR)/libvf-conversion.a
 
+NOTIFIER_SRC_DIR := $(SERVICE_SRC_DIR)/notifier
+NOTIFIER_SRC     := $(NOTIFIER_SRC_DIR)/vf-notifier.c
+NOTIFIER_OBJ     := $(BUILD_DIR)/vf-notifier.o
+
 # Output binary
 TARGET := $(BUILD_DIR)/vf_service
 
@@ -75,6 +79,7 @@ CFLAGS := -Wall -Wextra -Werror \
           -I$(CORE_SRC_DIR) \
           -I$(FILE_UNIT_SRC_DIR) \
           -I$(CONVERSION_UNIT_SRC_DIR) \
+          -I$(NOTIFIER_SRC_DIR) \
           -I$(VF_COMMON_INC_DIR) \
           -I$(VF_LOGGER_INC_DIR) \
           -I$(VF_FRAMEBUFFER_INC_DIR) \
@@ -96,7 +101,7 @@ LDFLAGS := $(VF_COMMON_LIB) $(VF_LOGGER_LIB)
 
 all: $(BUILD_DIR) vf_common vf_logger vf_framebuffer vf_file vf_conversion \
      $(PARSER_OBJ) $(BUFFER_MGR_OBJ) $(CORE_OBJ) \
-     $(FILE_UNIT_OBJ) $(CONVERSION_UNIT_OBJ) \
+     $(FILE_UNIT_OBJ) $(CONVERSION_UNIT_OBJ) $(NOTIFIER_OBJ) \
      $(MAIN_OBJ) $(TARGET)
 
 vf_common:
@@ -129,6 +134,9 @@ $(BUILD_DIR)/vf-buff-pool.o: $(BUFFER_MGR_SRC_DIR)/vf-buff-pool.c
 $(BUILD_DIR)/vf-buff-queue.o: $(BUFFER_MGR_SRC_DIR)/vf-buff-queue.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+$(BUILD_DIR)/vf-notifier.o: $(NOTIFIER_SRC_DIR)/vf-notifier.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
 # Core — reguli separate
 $(BUILD_DIR)/vf-processing-unit.o: $(CORE_SRC_DIR)/vf-processing-unit.c
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -145,11 +153,14 @@ $(FILE_UNIT_OBJ): $(FILE_UNIT_SRC)
 $(CONVERSION_UNIT_OBJ): $(CONVERSION_UNIT_SRC)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+$(NOTIFIER_OBJ): $(NOTIFIER_SRC)
+	$(CC) $(CFLAGS) -c $< -o $@
+
 $(MAIN_OBJ): $(MAIN_SRC)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(TARGET): $(PARSER_OBJ) $(BUFFER_MGR_OBJ) $(CORE_OBJ) \
-           $(FILE_UNIT_OBJ) $(CONVERSION_UNIT_OBJ) \
+           $(FILE_UNIT_OBJ) $(CONVERSION_UNIT_OBJ) $(NOTIFIER_OBJ) \
            $(MAIN_OBJ)
 	$(CC) $(CFLAGS) $^ \
 		$(VF_FILE_LIB) \
