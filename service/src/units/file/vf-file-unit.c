@@ -239,9 +239,21 @@ vf_err_t vf_file_unit_get_data(void *ctx, ...)
                         return err;
                 }
 
+                vf_framebuffer_set_meta(data->current_fb, data->frame_idx, data->frame_idx,
+                                        frame_path, data->fb_params.width, data->fb_params.height,
+                                        data->fb_params.format);
+
                 data->frame_idx++;
 
-                log_dbg("FILE_IN: read %zu bytes from '%s'", read, frame_path);
+                log_dbg("FILE_IN: read %zu bytes from '%s'"
+                        "[frame_id=%u seq=%u ts=%lums fmt=%s width=%u height=%u]",
+                        read, data->file_path, data->current_fb->meta.frame_id,
+                        data->current_fb->meta.sequence_index,
+                        (unsigned long)data->current_fb->meta.timestamp_ms,
+                        vf_pixel_fmt_str(data->current_fb->meta.format),
+                        data->current_fb->meta.width,
+                        data->current_fb->meta.height);
+
         } else {
                 /* FILE_OUT: pop frame from in_queue */
                 if (NULL == unit->in_queue) {
