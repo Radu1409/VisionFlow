@@ -183,6 +183,15 @@ vf_err_t run_pipeline_for_frames(vf_pipeline_t        *pipeline,
         return VF_SUCCESS;
 }
 
+static
+void on_frame_ready(vf_notifier_event_t event, void *data, void *ctx)
+{
+        (void)data;
+        (void)ctx;
+
+        log_info("Notifier: event received — '%s'", vf_notifier_event2str(event));
+}
+
 /* =========================================================================
  * Single scenario runner
  * ========================================================================= */
@@ -348,6 +357,10 @@ vf_err_t run_scenario(const vf_scenario_t  *scenario,
         }
 
         pipeline_created = 1;
+
+        (void)vf_notifier_subscribe(&file_in_unit.notifier,
+                                    VF_NOTIFIER_EVENT_FRAME_READY,
+                                    on_frame_ready, NULL);
 
         /* ----------------------------------------------------------------
          * 7. Run pipeline for each frame

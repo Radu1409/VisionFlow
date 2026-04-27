@@ -324,6 +324,9 @@ vf_err_t vf_file_unit_send_data(void *ctx, ...)
                         return err;
                 }
 
+                (void)vf_notifier_publish(&unit->notifier, VF_NOTIFIER_EVENT_FRAME_READY,
+                                          data->current_fb);
+
                 log_dbg("FILE_IN: frame pushed to out_queue");
         } else {
                 /* FILE_OUT
