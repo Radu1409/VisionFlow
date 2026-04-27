@@ -18,6 +18,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "vf-framebuffer.h"
 #include "vf-logger.h"
@@ -342,6 +343,28 @@ vf_err_t vf_framebuffer_clear(vf_framebuffer_t *fb)
         log_dbg("Framebuffer cleared: size=%zu bytes.", fb->total_size);
 
         return VF_SUCCESS;
+}
+
+void vf_framebuffer_set_meta(vf_framebuffer_t *fb, uint32_t frame_id, uint32_t sequence_index,
+                             const char *source_name, uint32_t width, uint32_t height,
+                             vf_pixel_fmt_t format)
+{
+        struct timespec ts = { 0 };
+
+        if (NULL == fb) {
+                return;
+        }
+
+        fb->meta.frame_id       = frame_id;
+        fb->meta.sequence_index = sequence_index;
+        fb->meta.source_name    = source_name;
+        fb->meta.width          = width;
+        fb->meta.height         = height;
+        fb->meta.format         = format;
+
+        (void)clock_gettime(CLOCK_MONOTONIC, &ts);
+        fb->meta.timestamp_ms = (uint64_t)(ts.tv_sec * 1000ULL +
+                                           ts.tv_nsec / 1000000ULL);
 }
 
 size_t vf_framebuffer_calculate_size(const vf_fb_params_t *params)
