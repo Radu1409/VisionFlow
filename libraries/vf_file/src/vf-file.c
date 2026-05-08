@@ -15,6 +15,7 @@
  **************************************************************************************************
  */
 
+#include <errno.h>
 #include <string.h>
 
 #include "vf-error.h"
@@ -39,7 +40,6 @@ vf_err_t vf_file_open(vf_file_t *file, const char *path, const char *mode)
         }
 
         file->fp = fopen(path, mode);
-
         if (NULL == file->fp) {
                 log_err("Failed to open file: %s (mode=%s)", path, mode);
 
@@ -57,9 +57,11 @@ vf_err_t vf_file_open(vf_file_t *file, const char *path, const char *mode)
 
 vf_err_t vf_file_close(vf_file_t *file)
 {
-        int ret = 0;
+        int rc = 0;
 
         if (NULL == file) {
+                log_err("Invalid params: file=%p", (void *)file);
+
                 return VF_INVALID_PARAMETER;
         }
 
@@ -69,8 +71,8 @@ vf_err_t vf_file_close(vf_file_t *file)
                 return VF_SUCCESS;
         }
 
-        ret = fclose(file->fp);
-        if (0 != ret) {
+        rc = fclose(file->fp);
+        if (EOK != rc) {
                 log_err("fclose failed for: %s", file->path);
 
                 return VF_FILE_ERR;
@@ -78,7 +80,7 @@ vf_err_t vf_file_close(vf_file_t *file)
 
         log_dbg("Closed file: %s", file->path);
 
-        file->fp      = NULL;
+        file->fp = NULL;
         file->is_open = 0;
         file->path[0] = '\0';
 
@@ -87,7 +89,7 @@ vf_err_t vf_file_close(vf_file_t *file)
 
 vf_err_t vf_file_read(vf_file_t *file, void *buf, size_t size, size_t *bytes_read)
 {
-        size_t n = 0U;
+        size_t ret_size = 0U;
 
         if (NULL == file || NULL == buf || 0U == size) {
                 log_err("Invalid params: file=%p buf=%p size=%zu",
@@ -102,26 +104,26 @@ vf_err_t vf_file_read(vf_file_t *file, void *buf, size_t size, size_t *bytes_rea
                 return VF_FILE_ERR;
         }
 
-        n = fread(buf, 1U, size, file->fp);
+        ret_size = fread(buf, 1U, size, file->fp);
 
         if (NULL != bytes_read) {
-                *bytes_read = n;
+                *bytes_read = ret_size;
         }
 
-        if (n != size && ferror(file->fp)) {
+        if (ret_size != size && ferror(file->fp)) {
                 log_err("fread error on: %s", file->path);
 
                 return VF_FILE_ERR;
         }
 
-        log_dbg("Read %zu/%zu bytes from: %s", n, size, file->path);
+        log_dbg("Read %zu/%zu bytes from: %s", ret_size, size, file->path);
 
         return VF_SUCCESS;
 }
 
 vf_err_t vf_file_write(vf_file_t *file, const void *buf, size_t size, size_t *bytes_written)
 {
-        size_t n = 0U;
+        size_t ret_size = 0U;
 
         if (NULL == file || NULL == buf || 0U == size) {
                 log_err("Invalid params: file=%p buf=%p size=%zu",
@@ -136,19 +138,19 @@ vf_err_t vf_file_write(vf_file_t *file, const void *buf, size_t size, size_t *by
                 return VF_FILE_ERR;
         }
 
-        n = fwrite(buf, 1U, size, file->fp);
+        ret_size = fwrite(buf, 1U, size, file->fp);
 
         if (NULL != bytes_written) {
-                *bytes_written = n;
+                *bytes_written = ret_size;
         }
 
-        if (n != size) {
-                log_err("fwrite incomplete on: %s (wrote %zu/%zu)", file->path, n, size);
+        if (ret_size != size) {
+                log_err("fwrite incomplete on: %s (wrote %zu/%zu)", file->path, ret_size, size);
 
                 return VF_FILE_ERR;
         }
 
-        log_dbg("Wrote %zu bytes to: %s", n, file->path);
+        log_dbg("Wrote %zu bytes to: %s", ret_size, file->path);
 
         return VF_SUCCESS;
 }
@@ -156,9 +158,12 @@ vf_err_t vf_file_write(vf_file_t *file, const void *buf, size_t size, size_t *by
 vf_err_t vf_file_size(vf_file_t *file, size_t *out_size)
 {
         long current = 0;
-        long size    = 0;
+        long size = 0;
 
         if (NULL == file || NULL == out_size) {
+                log_err("Invalid params: file=%p out_size=%p",
+                        (void *)file, (void *)out_size);
+
                 return VF_INVALID_PARAMETER;
         }
 
@@ -175,7 +180,7 @@ vf_err_t vf_file_size(vf_file_t *file, size_t *out_size)
                 return VF_FILE_ERR;
         }
 
-        if (0 != fseek(file->fp, 0, SEEK_END)) {
+        if (EOK != fseek(file->fp, 0, SEEK_END)) {
                 log_err("fseek SEEK_END failed for: %s", file->path);
 
                 return VF_FILE_ERR;
@@ -188,7 +193,7 @@ vf_err_t vf_file_size(vf_file_t *file, size_t *out_size)
                 return VF_FILE_ERR;
         }
 
-        if (0 != fseek(file->fp, current, SEEK_SET)) {
+        if (EOK != fseek(file->fp, current, SEEK_SET)) {
                 log_err("fseek restore failed for: %s", file->path);
 
                 return VF_FILE_ERR;
@@ -204,10 +209,19 @@ vf_err_t vf_file_exists(const char *path, int *out_exists)
         FILE *fp = NULL;
 
         if (NULL == path || NULL == out_exists) {
+                log_err("Invalid params: path=%p out_exists=%p",
+                        (void *)path, (void *)out_exists);
+
                 return VF_INVALID_PARAMETER;
         }
 
         fp = fopen(path, "r");
+        if(NULL != fp) {
+                log_err("Failed to open file %s. Error: %s\n", (void *)fp, strerror(errno));
+
+                return VF_FILE_ERR;
+        }
+
         *out_exists = (NULL != fp) ? 1 : 0;
 
         if (NULL != fp) {
@@ -220,6 +234,8 @@ vf_err_t vf_file_exists(const char *path, int *out_exists)
 vf_err_t vf_file_seek(vf_file_t *file, long offset, int whence)
 {
         if (NULL == file) {
+                log_err("Invalid params: file=%p", (void *)file);
+
                 return VF_INVALID_PARAMETER;
         }
 
@@ -229,7 +245,7 @@ vf_err_t vf_file_seek(vf_file_t *file, long offset, int whence)
                 return VF_FILE_ERR;
         }
 
-        if (0 != fseek(file->fp, offset, whence)) {
+        if (EOK != fseek(file->fp, offset, whence)) {
                 log_err("fseek failed for: %s", file->path);
 
                 return VF_FILE_ERR;
@@ -243,6 +259,8 @@ vf_err_t vf_file_tell(vf_file_t *file, long *out_pos)
         long pos = 0;
 
         if (NULL == file || NULL == out_pos) {
+                log_err("Invalid params: file=%p out_pos=%p", (void *)file, (void *)out_pos);
+
                 return VF_INVALID_PARAMETER;
         }
 

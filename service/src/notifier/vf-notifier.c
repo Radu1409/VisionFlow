@@ -30,13 +30,13 @@
 
 bool vf_notifier_is_sender(vf_notifier_mode_t mode)
 {
-        return (VF_NOTIFIER_MODE_SENDER        == mode ||
+        return (VF_NOTIFIER_MODE_SENDER == mode ||
                 VF_NOTIFIER_MODE_BIDIRECTIONAL == mode);
 }
 
 bool vf_notifier_is_receiver(vf_notifier_mode_t mode)
 {
-        return (VF_NOTIFIER_MODE_RECEIVER      == mode ||
+        return (VF_NOTIFIER_MODE_RECEIVER == mode ||
                 VF_NOTIFIER_MODE_BIDIRECTIONAL == mode);
 }
 
@@ -67,7 +67,7 @@ vf_err_t vf_notifier_init(vf_notifier_t *notifier, const char *id, vf_notifier_m
         }
 
         if (mode != VF_NOTIFIER_MODE_RECEIVER &&
-            mode != VF_NOTIFIER_MODE_SENDER   &&
+            mode != VF_NOTIFIER_MODE_SENDER &&
             mode != VF_NOTIFIER_MODE_BIDIRECTIONAL) {
                 log_err("Invalid input: mode = %d", mode);
 
@@ -83,8 +83,8 @@ vf_err_t vf_notifier_init(vf_notifier_t *notifier, const char *id, vf_notifier_m
         notifier->initialized = 0;
 
         rc = pthread_mutex_init(&notifier->mutex, NULL);
-        if (0 != rc) {
-                log_err("Failed to initialize mutex for notifier '%s'", notifier->id);
+        if (EOK != rc) {
+                log_err("Failed to initialize mutex for notifier '%s', Error: %d", notifier->id, rc);
 
                 return VF_SYNC_ERROR;
         }
@@ -113,8 +113,8 @@ vf_err_t vf_notifier_deinit(vf_notifier_t *notifier)
         }
 
         rc = pthread_mutex_destroy(&notifier->mutex);
-        if (0 != rc) {
-                log_err("Failed to destroy mutex for notifier '%s'", notifier->id);
+        if (EOK != rc) {
+                log_err("Failed to destroy mutex for notifier '%s', Error: %d", notifier->id, rc);
         }
 
         notifier->initialized = 0;
@@ -128,7 +128,7 @@ vf_err_t vf_notifier_deinit(vf_notifier_t *notifier)
 vf_err_t vf_notifier_subscribe(vf_notifier_t *notifier, vf_notifier_event_t event,
                                vf_notifier_cb_t cb, void *ctx)
 {
-        int ret = 0;
+        int rc = 0;
         vf_err_t err = VF_SUCCESS;
 
         if (NULL == notifier || NULL == cb) {
@@ -150,9 +150,9 @@ vf_err_t vf_notifier_subscribe(vf_notifier_t *notifier, vf_notifier_event_t even
                 return VF_INVALID_PARAMETER;
         }
 
-        ret = pthread_mutex_lock(&notifier->mutex);
-        if (ret != EOK) {
-                log_err("Failed to lock notifier mutex.");
+        rc = pthread_mutex_lock(&notifier->mutex);
+        if (EOK != rc) {
+                log_err("Failed to lock notifier mutex. Error: %d", rc);
 
                 return VF_SYNC_ERROR;
         }
@@ -177,9 +177,9 @@ vf_err_t vf_notifier_subscribe(vf_notifier_t *notifier, vf_notifier_event_t even
                  notifier->subscriber_count);
 
 unlock:
-        ret = pthread_mutex_unlock(&notifier->mutex);
-        if (ret != EOK) {
-                log_err("Failed to unlock notifier mutex.");
+        rc = pthread_mutex_unlock(&notifier->mutex);
+        if (EOK != rc) {
+                log_err("Failed to unlock notifier mutex. Error: %d", rc);
 
                 return VF_SYNC_ERROR;
         }
@@ -191,7 +191,7 @@ vf_err_t vf_notifier_publish(vf_notifier_t *notifier, vf_notifier_event_t event,
                              void *data)
 {
         uint32_t i = 0U;
-        int ret = 0;
+        int rc = 0;
         vf_err_t err = VF_SUCCESS;
 
         if (NULL == notifier) {
@@ -212,9 +212,9 @@ vf_err_t vf_notifier_publish(vf_notifier_t *notifier, vf_notifier_event_t event,
                 return VF_INVALID_PARAMETER;
         }
 
-        ret = pthread_mutex_lock(&notifier->mutex);
-        if (ret != EOK) {
-                log_err("Failed to lock notifier mutex.");
+        rc = pthread_mutex_lock(&notifier->mutex);
+        if (EOK != rc) {
+                log_err("Failed to lock notifier mutex. Error: %d", rc);
 
                 return VF_SYNC_ERROR;
         }
@@ -238,9 +238,9 @@ vf_err_t vf_notifier_publish(vf_notifier_t *notifier, vf_notifier_event_t event,
         }
 
 unlock:
-        ret = pthread_mutex_unlock(&notifier->mutex);
-        if (ret != EOK) {
-                log_err("Failed to unlock notifier mutex.");
+        rc = pthread_mutex_unlock(&notifier->mutex);
+        if (EOK != rc) {
+                log_err("Failed to unlock notifier mutex. Error: %d", rc);
 
                 return VF_SYNC_ERROR;
         }
@@ -252,7 +252,7 @@ vf_err_t vf_notifier_broadcast(vf_notifier_t *notifier, vf_notifier_event_t even
                                void *data)
 {
         uint32_t i = 0U;
-        int ret = 0;
+        int rc = 0;
         vf_err_t err = VF_SUCCESS;
 
         if (NULL == notifier) {
@@ -273,9 +273,9 @@ vf_err_t vf_notifier_broadcast(vf_notifier_t *notifier, vf_notifier_event_t even
                 return VF_INVALID_PARAMETER;
         }
 
-        ret = pthread_mutex_lock(&notifier->mutex);
-        if (ret != EOK) {
-                log_err("Failed to lock notifier mutex.");
+        rc = pthread_mutex_lock(&notifier->mutex);
+        if (EOK != rc) {
+                log_err("Failed to lock notifier mutex. Error: %d", rc);
 
                 return VF_SYNC_ERROR;
         }
@@ -295,9 +295,9 @@ vf_err_t vf_notifier_broadcast(vf_notifier_t *notifier, vf_notifier_event_t even
         }
 
 unlock:
-        ret = pthread_mutex_unlock(&notifier->mutex);
-        if (ret != EOK) {
-                log_err("Failed to unlock notifier mutex.");
+        rc = pthread_mutex_unlock(&notifier->mutex);
+        if (EOK != rc) {
+                log_err("Failed to unlock notifier mutex. Error: %d", rc);
 
                 return VF_SYNC_ERROR;
         }

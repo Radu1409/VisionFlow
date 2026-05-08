@@ -14,7 +14,6 @@
  **************************************************************************************************
  **/
 
-
 #include "vf-error.h"
 
 #define VF_STR_SUCCESS                     "Operation completed successfully"

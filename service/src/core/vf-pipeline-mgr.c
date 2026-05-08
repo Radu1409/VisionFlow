@@ -71,9 +71,9 @@ vf_err_t vf_pipeline_add_unit(vf_pipeline_t *pipeline, vf_unit_t *unit)
 
 vf_err_t vf_pipeline_create(vf_pipeline_t *pipeline)
 {
-        vf_err_t err     = VF_SUCCESS;
-        uint32_t i       = 0U;
+        uint32_t i = 0U;
         uint32_t q_count = 0U;
+        vf_err_t err = VF_SUCCESS;
 
         if (NULL == pipeline) {
                 log_err("Invalid input: pipeline = %p", (void *)pipeline);
@@ -158,8 +158,8 @@ cleanup_queues:
 
 vf_err_t vf_pipeline_run_once(vf_pipeline_t *pipeline)
 {
+        uint32_t i = 0U;
         vf_err_t err = VF_SUCCESS;
-        uint32_t i   = 0U;
 
         if (NULL == pipeline) {
                 log_err("Invalid input: pipeline = %p", (void *)pipeline);
@@ -193,16 +193,18 @@ vf_err_t vf_pipeline_run_once(vf_pipeline_t *pipeline)
 
 void vf_pipeline_destroy(vf_pipeline_t *pipeline)
 {
-        uint32_t i       = 0U;
+        uint32_t i = 0U;
         uint32_t q_count = 0U;
 
         if (NULL == pipeline) {
-                log_wrn("vf_pipeline_destroy called with NULL pipeline");
+                log_err("vf_pipeline_destroy called with NULL pipeline");
 
                 return;
         }
 
         if (0 == pipeline->initialized) {
+                log_err("Pipeline not initialized");
+
                 return;
         }
 

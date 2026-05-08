@@ -66,10 +66,10 @@ void print_usage(const char *app_name)
 
 int main(int argc, char *argv[])
 {
-        vf_err_t err     = VF_SUCCESS;
-        int      opt     = 0;
-        int      longidx = 0;
-        int      found   = 0;
+        vf_err_t err = VF_SUCCESS;
+        int opt = 0;
+        int longidx = 0;
+        int found = 0;
         const char *flag = NULL;
 
         err = vf_logger_init("VisionFlow", VF_LOG_LEVEL_DBG);
@@ -93,40 +93,49 @@ int main(int argc, char *argv[])
 
         switch (opt) {
                 case OPT_ALL:
-                        err   = vf_core_run_all();
+                        err = vf_core_run_all();
                         found = 1;
+
                         break;
                 case OPT_RGB_TO_YUV_CONCAT:
-                        flag  = "--rgb_to_yuv_concat";
+                        flag = "--rgb_to_yuv_concat";
                         found = 1;
+
                         break;
                 case OPT_RGB_TO_YUV_SPLIT:
-                        flag  = "--rgb_to_yuv_split";
+                        flag = "--rgb_to_yuv_split";
                         found = 1;
+
                         break;
                 case OPT_YUV_TO_RGB_CONCAT:
-                        flag  = "--yuv_to_rgb_concat";
+                        flag = "--yuv_to_rgb_concat";
                         found = 1;
+
                         break;
                 case OPT_YUV_TO_RGB_SPLIT:
-                        flag  = "--yuv_to_rgb_split";
+                        flag = "--yuv_to_rgb_split";
                         found = 1;
+
                         break;
                 case OPT_RAW_TO_RGB_CONCAT:
-                        flag  = "--raw_to_rgb_concat";
+                        flag = "--raw_to_rgb_concat";
                         found = 1;
+
                         break;
                 case OPT_RAW_TO_RGB_SPLIT:
-                        flag  = "--raw_to_rgb_split";
+                        flag = "--raw_to_rgb_split";
                         found = 1;
+
                         break;
                 case OPT_RAW_TO_YUV_CONCAT:
-                        flag  = "--raw_to_yuv_concat";
+                        flag = "--raw_to_yuv_concat";
                         found = 1;
+
                         break;
                 case OPT_RAW_TO_YUV_SPLIT:
-                        flag  = "--raw_to_yuv_split";
+                        flag = "--raw_to_yuv_split";
                         found = 1;
+
                         break;
                 default:
                         print_usage(argv[0]);

@@ -19,10 +19,6 @@
 
 #include "vf-error.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 typedef vf_err_t (*vf_unit_op_fn_t)(void *ctx, ...);
 
 typedef struct {
@@ -32,10 +28,6 @@ typedef struct {
         vf_unit_op_fn_t process_data;
         vf_unit_op_fn_t send_data;
 } vf_unit_operations_t;
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* VF_UNIT_OPERATIONS_H */
 

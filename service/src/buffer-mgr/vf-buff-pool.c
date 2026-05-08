@@ -24,13 +24,12 @@
 
 #define MODULE_NAME "vf_buf_pool"
 
-vf_err_t vf_buf_pool_init(vf_buf_pool_t        *pool,
-                           const vf_fb_params_t *params,
-                           uint32_t              slot_count)
+vf_err_t vf_buf_pool_init(vf_buf_pool_t *pool, const vf_fb_params_t *params,
+                          uint32_t slot_count)
 {
+        uint32_t i = 0U;
+        int rc = 0;
         vf_err_t err = VF_SUCCESS;
-        uint32_t i   = 0U;
-        int      ret = 0;
 
         if ((NULL == pool) || (NULL == params)) {
                 log_err("Invalid params: pool=%p params=%p",
@@ -47,9 +46,9 @@ vf_err_t vf_buf_pool_init(vf_buf_pool_t        *pool,
 
         (void)memset(pool, 0, sizeof(*pool));
 
-        ret = pthread_mutex_init(&pool->lock, NULL);
-        if (0 != ret) {
-                log_err("pthread_mutex_init failed: %d", ret);
+        rc = pthread_mutex_init(&pool->lock, NULL);
+        if (EOK != rc) {
+                log_err("Failed to initialize pool mutex. Error: %d", rc);
 
                 return VF_SYNC_ERROR;
         }
@@ -65,7 +64,10 @@ vf_err_t vf_buf_pool_init(vf_buf_pool_t        *pool,
                                 vf_framebuffer_free(&pool->slots[i]);
                         }
 
-                        (void)pthread_mutex_destroy(&pool->lock);
+                        rc = pthread_mutex_destroy(&pool->lock);
+                        if (EOK != rc) {
+                                log_err("Failed to destroy pool mutex. Error: %d", rc);
+                        }
 
                         return err;
                 }
@@ -73,24 +75,22 @@ vf_err_t vf_buf_pool_init(vf_buf_pool_t        *pool,
                 pool->in_use[i] = 0U;
         }
 
-        pool->capacity    = slot_count;
-        pool->available   = slot_count;
+        pool->capacity = slot_count;
+        pool->available = slot_count;
         pool->initialized = 1;
 
         log_info("Buffer pool initialized: %u slots, format=%s, %ux%u",
                  slot_count,
                  vf_pixel_fmt_str(params->format),
-                 params->width,
-                 params->height);
+                 params->width, params->height);
 
         return VF_SUCCESS;
 }
 
-vf_err_t vf_buf_pool_acquire(vf_buf_pool_t     *pool,
-                              vf_framebuffer_t **out_fb)
+vf_err_t vf_buf_pool_acquire(vf_buf_pool_t *pool, vf_framebuffer_t **out_fb)
 {
-        uint32_t i   = 0U;
-        int      ret = 0;
+        uint32_t i = 0U;
+        int rc = 0;
 
         if ((NULL == pool) || (NULL == out_fb)) {
                 log_err("Invalid params: pool=%p out_fb=%p",
@@ -107,9 +107,9 @@ vf_err_t vf_buf_pool_acquire(vf_buf_pool_t     *pool,
 
         *out_fb = NULL;
 
-        ret = pthread_mutex_lock(&pool->lock);
-        if (0 != ret) {
-                log_err("pthread_mutex_lock failed: %d", ret);
+        rc = pthread_mutex_lock(&pool->lock);
+        if (EOK != rc) {
+                log_err("Failed to lock pool mutex. Error: %d", rc);
 
                 return VF_SYNC_ERROR;
         }
@@ -117,7 +117,12 @@ vf_err_t vf_buf_pool_acquire(vf_buf_pool_t     *pool,
         if (0U == pool->available) {
                 log_wrn("Pool exhausted: no free slots");
 
-                (void)pthread_mutex_unlock(&pool->lock);
+                rc = pthread_mutex_unlock(&pool->lock);
+                if (EOK != rc) {
+                        log_err("Failed to unlock pool mutex. Error: %d", rc);
+
+                        return VF_SYNC_ERROR;
+                }
 
                 return VF_OOM;
         }
@@ -132,9 +137,9 @@ vf_err_t vf_buf_pool_acquire(vf_buf_pool_t     *pool,
                 }
         }
 
-        ret = pthread_mutex_unlock(&pool->lock);
-        if (0 != ret) {
-                log_err("pthread_mutex_unlock failed: %d", ret);
+        rc = pthread_mutex_unlock(&pool->lock);
+        if (EOK != rc) {
+                log_err("Failed to unlock pool mutex. Error: %d", rc);
 
                 return VF_SYNC_ERROR;
         }
@@ -144,12 +149,11 @@ vf_err_t vf_buf_pool_acquire(vf_buf_pool_t     *pool,
         return VF_SUCCESS;
 }
 
-vf_err_t vf_buf_pool_release(vf_buf_pool_t    *pool,
-                              vf_framebuffer_t *fb)
+vf_err_t vf_buf_pool_release(vf_buf_pool_t *pool, vf_framebuffer_t *fb)
 {
-        uint32_t i     = 0U;
-        int      found = 0;
-        int      ret   = 0;
+        uint32_t i = 0U;
+        int found = 0;
+        int rc = 0;
 
         if ((NULL == pool) || (NULL == fb)) {
                 log_err("Invalid params: pool=%p fb=%p",
@@ -164,9 +168,9 @@ vf_err_t vf_buf_pool_release(vf_buf_pool_t    *pool,
                 return VF_INIT_FAILED;
         }
 
-        ret = pthread_mutex_lock(&pool->lock);
-        if (0 != ret) {
-                log_err("pthread_mutex_lock failed: %d", ret);
+        rc = pthread_mutex_lock(&pool->lock);
+        if (EOK != rc) {
+                log_err("Failed to lock pool mutex. Error: %d", rc);
 
                 return VF_SYNC_ERROR;
         }
@@ -186,7 +190,12 @@ vf_err_t vf_buf_pool_release(vf_buf_pool_t    *pool,
                 }
         }
 
-        (void)pthread_mutex_unlock(&pool->lock);
+        rc = pthread_mutex_unlock(&pool->lock);
+        if (EOK != rc) {
+                log_err("Failed to unlock pool mutex. Error: %d", rc);
+
+                return VF_SYNC_ERROR;
+        }
 
         if (0 == found) {
                 log_err("Framebuffer %p does not belong to this pool", (void *)fb);
@@ -202,6 +211,7 @@ vf_err_t vf_buf_pool_release(vf_buf_pool_t    *pool,
 void vf_buf_pool_deinit(vf_buf_pool_t *pool)
 {
         uint32_t i = 0U;
+        int rc = 0;
 
         if (NULL == pool) {
                 log_wrn("vf_buf_pool_deinit called with NULL pool");
@@ -210,6 +220,8 @@ void vf_buf_pool_deinit(vf_buf_pool_t *pool)
         }
 
         if (0 == pool->initialized) {
+                log_err("Pool not initialized");
+
                 return;
         }
 
@@ -221,7 +233,10 @@ void vf_buf_pool_deinit(vf_buf_pool_t *pool)
                 vf_framebuffer_free(&pool->slots[i]);
         }
 
-        (void)pthread_mutex_destroy(&pool->lock);
+        rc = pthread_mutex_destroy(&pool->lock);
+        if (EOK != rc) {
+                log_err("Failed to destroy pool mutex. Error: %d", rc);
+        }
 
         (void)memset(pool, 0, sizeof(*pool));
 
@@ -231,14 +246,35 @@ void vf_buf_pool_deinit(vf_buf_pool_t *pool)
 uint32_t vf_buf_pool_available(vf_buf_pool_t *pool)
 {
         uint32_t count = 0U;
+        int rc = 0;
 
-        if ((NULL == pool) || (0 == pool->initialized)) {
+        if (NULL == pool) {
+                log_err("Invalid params: pool=%p", (void *)pool);
+
                 return 0U;
         }
 
-        (void)pthread_mutex_lock(&pool->lock);
+        if(0 == pool->initialized) {
+                log_err("Pool not initialized");
+
+                return 0U;
+        }
+
+        rc = pthread_mutex_lock(&pool->lock);
+        if (EOK != rc) {
+                log_err("Failed to lock pool mutex. Error: %d", rc);
+
+                return VF_SYNC_ERROR;
+        }
+
         count = pool->available;
-        (void)pthread_mutex_unlock(&pool->lock);
+
+        rc = pthread_mutex_unlock(&pool->lock);
+        if (EOK != rc) {
+                log_err("Failed to unlock pool mutex. Error: %d", rc);
+
+                return VF_SYNC_ERROR;
+        }
 
         return count;
 }

@@ -23,16 +23,12 @@
 #include "vf-framebuffer.h"
 #include "vf-unit-operations.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 typedef struct {
         vf_pixel_fmt_t  src_fmt;
         vf_pixel_fmt_t  dst_fmt;
         vf_fb_params_t  dst_params;
-        vf_buf_pool_t  *pool;
-        vf_buf_pool_t  *src_pool;
+        vf_buf_pool_t   *pool;
+        vf_buf_pool_t   *src_pool;
 } vf_conversion_unit_cfg_t;
 
 vf_err_t vf_conversion_unit_init(void *ctx, ...);
@@ -42,10 +38,6 @@ vf_err_t vf_conversion_unit_process_data(void *ctx, ...);
 vf_err_t vf_conversion_unit_send_data(void *ctx, ...);
 
 vf_err_t vf_conversion_unit_init_operations(vf_unit_operations_t *ops);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* VF_CONVERSION_UNIT_H */
 

@@ -25,7 +25,7 @@
 
 vf_err_t vf_buf_queue_init(vf_buf_queue_t *queue, uint32_t capacity)
 {
-        int ret = 0;
+        int rc = 0;
 
         if (NULL == queue) {
                 log_err("Invalid param: queue=NULL");
@@ -41,17 +41,17 @@ vf_err_t vf_buf_queue_init(vf_buf_queue_t *queue, uint32_t capacity)
 
         (void)memset(queue, 0, sizeof(*queue));
 
-        ret = pthread_mutex_init(&queue->lock, NULL);
-        if (0 != ret) {
-                log_err("pthread_mutex_init failed: %d", ret);
+        rc = pthread_mutex_init(&queue->lock, NULL);
+        if (EOK != rc) {
+                log_err("Failed to initialize queue mutex. Error: %d", rc);
 
                 return VF_SYNC_ERROR;
         }
 
-        queue->capacity    = capacity;
-        queue->head        = 0U;
-        queue->tail        = 0U;
-        queue->count       = 0U;
+        queue->capacity = capacity;
+        queue->head = 0U;
+        queue->tail = 0U;
+        queue->count = 0U;
         queue->initialized = 1;
 
         log_info("Buffer queue initialized: capacity=%u", capacity);
@@ -59,10 +59,9 @@ vf_err_t vf_buf_queue_init(vf_buf_queue_t *queue, uint32_t capacity)
         return VF_SUCCESS;
 }
 
-vf_err_t vf_buf_queue_push(vf_buf_queue_t   *queue,
-                            vf_framebuffer_t *fb)
+vf_err_t vf_buf_queue_push(vf_buf_queue_t *queue, vf_framebuffer_t *fb)
 {
-        int ret = 0;
+        int rc = 0;
 
         if ((NULL == queue) || (NULL == fb)) {
                 log_err("Invalid params: queue=%p fb=%p",
@@ -77,9 +76,9 @@ vf_err_t vf_buf_queue_push(vf_buf_queue_t   *queue,
                 return VF_INIT_FAILED;
         }
 
-        ret = pthread_mutex_lock(&queue->lock);
-        if (0 != ret) {
-                log_err("pthread_mutex_lock failed: %d", ret);
+        rc = pthread_mutex_lock(&queue->lock);
+        if (EOK != rc) {
+                log_err("Failed to lock queue mutex. Error: %d", rc);
 
                 return VF_SYNC_ERROR;
         }
@@ -87,7 +86,12 @@ vf_err_t vf_buf_queue_push(vf_buf_queue_t   *queue,
         if (queue->count >= queue->capacity) {
                 log_wrn("Queue full: capacity=%u", queue->capacity);
 
-                (void)pthread_mutex_unlock(&queue->lock);
+                rc = pthread_mutex_unlock(&queue->lock);
+                if (EOK != rc) {
+                        log_err("Failed to unlock queue mutex. Error: %d", rc);
+
+                        return VF_SYNC_ERROR;
+                }
 
                 return VF_OOM;
         }
@@ -98,9 +102,9 @@ vf_err_t vf_buf_queue_push(vf_buf_queue_t   *queue,
 
         log_dbg("Frame pushed: count=%u/%u", queue->count, queue->capacity);
 
-        ret = pthread_mutex_unlock(&queue->lock);
-        if (0 != ret) {
-                log_err("pthread_mutex_unlock failed: %d", ret);
+        rc = pthread_mutex_unlock(&queue->lock);
+        if (EOK != rc) {
+                log_err("Failed to unlock queue mutex. Error: %d", rc);
 
                 return VF_SYNC_ERROR;
         }
@@ -108,10 +112,9 @@ vf_err_t vf_buf_queue_push(vf_buf_queue_t   *queue,
         return VF_SUCCESS;
 }
 
-vf_err_t vf_buf_queue_pop(vf_buf_queue_t    *queue,
-                           vf_framebuffer_t **out_fb)
+vf_err_t vf_buf_queue_pop(vf_buf_queue_t *queue, vf_framebuffer_t **out_fb)
 {
-        int ret = 0;
+        int rc = 0;
 
         if ((NULL == queue) || (NULL == out_fb)) {
                 log_err("Invalid params: queue=%p out_fb=%p",
@@ -128,9 +131,9 @@ vf_err_t vf_buf_queue_pop(vf_buf_queue_t    *queue,
 
         *out_fb = NULL;
 
-        ret = pthread_mutex_lock(&queue->lock);
-        if (0 != ret) {
-                log_err("pthread_mutex_lock failed: %d", ret);
+        rc = pthread_mutex_lock(&queue->lock);
+        if (EOK != rc) {
+                log_err("Failed to lock queue mutex. Error: %d", rc);
 
                 return VF_SYNC_ERROR;
         }
@@ -138,21 +141,26 @@ vf_err_t vf_buf_queue_pop(vf_buf_queue_t    *queue,
         if (0U == queue->count) {
                 log_dbg("Queue empty");
 
-                (void)pthread_mutex_unlock(&queue->lock);
+                rc = pthread_mutex_unlock(&queue->lock);
+                if (EOK != rc) {
+                        log_err("Failed to unlock queue mutex. Error: %d", rc);
+
+                        return VF_SYNC_ERROR;
+                }
 
                 return VF_FILE_ERR; /* reusing as "nothing available" — see note below */
         }
 
-        *out_fb    = queue->slots[queue->head];
+        *out_fb = queue->slots[queue->head];
         queue->slots[queue->head] = NULL;
         queue->head  = (queue->head + 1U) % queue->capacity;
         queue->count--;
 
         log_dbg("Frame popped: count=%u/%u", queue->count, queue->capacity);
 
-        ret = pthread_mutex_unlock(&queue->lock);
-        if (0 != ret) {
-                log_err("pthread_mutex_unlock failed: %d", ret);
+        rc = pthread_mutex_unlock(&queue->lock);
+        if (EOK != rc) {
+                log_err("Failed to unlock queue mutex. Error: %d", rc);
 
                 return VF_SYNC_ERROR;
         }
@@ -162,6 +170,8 @@ vf_err_t vf_buf_queue_pop(vf_buf_queue_t    *queue,
 
 void vf_buf_queue_deinit(vf_buf_queue_t *queue)
 {
+        int rc = 0;
+
         if (NULL == queue) {
                 log_wrn("vf_buf_queue_deinit called with NULL queue");
 
@@ -169,6 +179,8 @@ void vf_buf_queue_deinit(vf_buf_queue_t *queue)
         }
 
         if (0 == queue->initialized) {
+                log_err("Queue not initialized");
+
                 return;
         }
 
@@ -176,7 +188,13 @@ void vf_buf_queue_deinit(vf_buf_queue_t *queue)
                 log_wrn("Queue deinit with %u frame(s) still in queue", queue->count);
         }
 
-        (void)pthread_mutex_destroy(&queue->lock);
+        rc = pthread_mutex_destroy(&queue->lock);
+        if (EOK != rc) {
+                log_err("Failed to destroy queue mutex. Error: %d", rc);
+
+                return;
+        }
+
 
         (void)memset(queue, 0, sizeof(*queue));
 
@@ -186,14 +204,31 @@ void vf_buf_queue_deinit(vf_buf_queue_t *queue)
 uint32_t vf_buf_queue_count(vf_buf_queue_t *queue)
 {
         uint32_t count = 0U;
+        int rc = 0;
 
-        if ((NULL == queue) || (0 == queue->initialized)) {
+        if (NULL == queue) {
+                log_err("Invalid params: queue=%p", (void *)queue);
+
                 return 0U;
         }
 
-        (void)pthread_mutex_lock(&queue->lock);
+        if (0 == queue->initialized) {
+                log_err("Queue not initialized");
+
+                return 0U;
+        }
+
+        rc = pthread_mutex_lock(&queue->lock);
+        if (EOK != rc) {
+                log_err("Failed to lock queue mutex. Error: %d", rc);
+        }
+
         count = queue->count;
-        (void)pthread_mutex_unlock(&queue->lock);
+
+        rc = pthread_mutex_unlock(&queue->lock);
+        if (EOK != rc) {
+                log_err("Failed to unlock queue mutex. Error: %d", rc);
+        }
 
         return count;
 }
@@ -201,14 +236,33 @@ uint32_t vf_buf_queue_count(vf_buf_queue_t *queue)
 int vf_buf_queue_is_full(vf_buf_queue_t *queue)
 {
         int full = 0;
+        int rc = 0;
 
-        if ((NULL == queue) || (0 == queue->initialized)) {
-                return 0;
+        if (NULL == queue) {
+                log_err("Invalid params: queue=%p", (void *)queue);
+
+                return 0U;
         }
 
-        (void)pthread_mutex_lock(&queue->lock);
+        if (0 == queue->initialized) {
+                log_err("Queue not initialized");
+
+                return 0U;    
+        }
+
+        rc = pthread_mutex_lock(&queue->lock);
+        if (EOK != rc) {
+                log_err("Failed to lock queue mutex. Error: %d", rc);
+
+                return VF_SYNC_ERROR;
+        }
+
         full = (queue->count >= queue->capacity) ? 1 : 0;
-        (void)pthread_mutex_unlock(&queue->lock);
+
+        rc = pthread_mutex_unlock(&queue->lock);
+        if (EOK != rc) {
+                log_err("Failed to unlock queue mutex. Error: %d", rc);
+        }
 
         return full;
 }
@@ -216,14 +270,36 @@ int vf_buf_queue_is_full(vf_buf_queue_t *queue)
 int vf_buf_queue_is_empty(vf_buf_queue_t *queue)
 {
         int empty = 0;
+        int rc = 0;
 
-        if ((NULL == queue) || (0 == queue->initialized)) {
+        if (NULL == queue) {
+                log_err("Invalid params: queue=%p", (void *)queue);
+
                 return 1;
         }
 
-        (void)pthread_mutex_lock(&queue->lock);
-        empty = (0U == queue->count) ? 1 : 0;
-        (void)pthread_mutex_unlock(&queue->lock);
+        if (0 == queue->initialized) {
+                log_err("Queue not initialized");
+
+                return 1;   
+        }
+
+        rc = pthread_mutex_lock(&queue->lock);
+        if (EOK != rc) {
+                log_err("Failed to lock queue mutex. Error: %d", rc);
+        }
+
+        if (0U == queue->count) {
+                empty = 1;
+        }
+        else {
+                empty = 0;
+        }
+
+        rc = pthread_mutex_unlock(&queue->lock);
+        if (EOK != rc) {
+                log_err("Failed to unlock queue mutex. Error: %d", rc);
+        }
 
         return empty;
 }

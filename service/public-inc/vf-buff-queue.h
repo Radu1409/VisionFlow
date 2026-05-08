@@ -24,10 +24,6 @@
 #include "vf-error.h"
 #include "vf-framebuffer.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define VF_BUF_QUEUE_MAX_CAPACITY 16U
 
 typedef struct {
@@ -41,22 +37,12 @@ typedef struct {
 } vf_buf_queue_t;
 
 vf_err_t vf_buf_queue_init(vf_buf_queue_t *queue, uint32_t capacity);
-
-vf_err_t vf_buf_queue_push(vf_buf_queue_t   *queue,
-                            vf_framebuffer_t *fb);
-
-vf_err_t vf_buf_queue_pop(vf_buf_queue_t    *queue,
-                           vf_framebuffer_t **out_fb);
-
-void     vf_buf_queue_deinit(vf_buf_queue_t *queue);
-
+vf_err_t vf_buf_queue_push(vf_buf_queue_t *queue, vf_framebuffer_t *fb);
+vf_err_t vf_buf_queue_pop(vf_buf_queue_t *queue, vf_framebuffer_t **out_fb);
+void vf_buf_queue_deinit(vf_buf_queue_t *queue);
 uint32_t vf_buf_queue_count(vf_buf_queue_t *queue);
-int      vf_buf_queue_is_full(vf_buf_queue_t *queue);
-int      vf_buf_queue_is_empty(vf_buf_queue_t *queue);
-
-#ifdef __cplusplus
-}
-#endif
+int vf_buf_queue_is_full(vf_buf_queue_t *queue);
+int vf_buf_queue_is_empty(vf_buf_queue_t *queue);
 
 #endif /* VF_BUFF_QUEUE_H */
 

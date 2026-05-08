@@ -41,7 +41,9 @@
  *   B = clip((298*C + 516*D           + 128) >> 8)
  * ========================================================================= */
 
-#define CLIP_U8(x)  ((uint8_t)(((x) < 0) ? 0 : (((x) > 255) ? 255 : (x))))
+#define CLIP_U8(x)               ((uint8_t)(((x) < 0) ? 0 : (((x) > 255) ? 255 : (x))))
+
+#define IS_UV_SAMPLE_POINT(x, y) ((0U == ((y) & 1U)) && (0U == ((x) & 1U)))
 
 static
 uint8_t rgb_to_y(uint8_t r, uint8_t g, uint8_t b)
@@ -131,25 +133,27 @@ static
 vf_err_t convert_raw8_to_rgb888(const vf_framebuffer_t *src, vf_framebuffer_t *dst)
 {
         const uint8_t *src_row = NULL;
-        uint8_t       *dst_row = NULL;
-        uint32_t       width   = 0U;
-        uint32_t       height  = 0U;
-        uint32_t       x       = 0U;
-        uint32_t       y       = 0U;
-        uint8_t        pixel   = 0U;
+        uint8_t *dst_row = NULL;
+        uint32_t width = 0U;
+        uint32_t height = 0U;
+        uint8_t pixel = 0U;
+        int validate_fb = 0;
 
-        if (0 != validate_framebuffers(src, dst)) {
+        validate_fb = validate_framebuffers(src, dst);
+        if (0 != validate_fb) {
+                log_err("Invalid framebuffers for RAW8 -> RGB888 conversion");
+
                 return VF_CONV_PROCESSING_ERR;
         }
 
-        width  = src->params.width;
+        width = src->params.width;
         height = src->params.height;
 
-        for (y = 0U; y < height; y++) {
+        for (uint32_t y = 0U; y < height; y++) {
                 src_row = src->data + y * src->plane_stride[0];
                 dst_row = dst->data + y * dst->plane_stride[0];
 
-                for (x = 0U; x < width; x++) {
+                for (uint32_t x = 0U; x < width; x++) {
                         pixel = src_row[x];
 
                         dst_row[x * 3U + 0U] = pixel;
@@ -171,32 +175,34 @@ static
 vf_err_t convert_raw8_to_yuv420p(const vf_framebuffer_t *src, vf_framebuffer_t *dst)
 {
         const uint8_t *src_row = NULL;
-        uint8_t       *y_row   = NULL;
-        uint8_t       *u_plane = NULL;
-        uint8_t       *v_plane = NULL;
-        uint32_t       width   = 0U;
-        uint32_t       height  = 0U;
-        uint32_t       x       = 0U;
-        uint32_t       y       = 0U;
+        uint8_t *y_row = NULL;
+        uint8_t *u_plane = NULL;
+        uint8_t *v_plane = NULL;
+        uint32_t width = 0U;
+        uint32_t height = 0U;
+        int validate_fb = 0;
 
-        if (0 != validate_framebuffers(src, dst)) {
+        validate_fb = validate_framebuffers(src, dst);
+        if (0 != validate_fb) {
+                log_err("Invalid framebuffers for RAW8 -> YUV420P conversion");
+
                 return VF_CONV_PROCESSING_ERR;
         }
 
-        width   = src->params.width;
-        height  = src->params.height;
+        width = src->params.width;
+        height = src->params.height;
         u_plane = dst->data + dst->plane_size[0];
-        v_plane = u_plane   + dst->plane_size[1];
+        v_plane = u_plane + dst->plane_size[1];
 
         /* Fill U and V planes with 128 (neutral chroma for grayscale) */
         (void)memset(u_plane, 128U, dst->plane_size[1]);
         (void)memset(v_plane, 128U, dst->plane_size[2]);
 
-        for (y = 0U; y < height; y++) {
+        for (uint32_t y = 0U; y < height; y++) {
                 src_row = src->data + y * src->plane_stride[0];
-                y_row   = dst->data + y * dst->plane_stride[0];
+                y_row = dst->data + y * dst->plane_stride[0];
 
-                for (x = 0U; x < width; x++) {
+                for (uint32_t x = 0U; x < width; x++) {
                         y_row[x] = src_row[x];
                 }
         }
@@ -214,32 +220,36 @@ static
 vf_err_t convert_rgb888_to_yuv420p(const vf_framebuffer_t *src, vf_framebuffer_t *dst)
 {
         const uint8_t *src_row = NULL;
-        uint8_t       *y_row   = NULL;
-        uint8_t       *u_plane = NULL;
-        uint8_t       *v_plane = NULL;
-        uint32_t       width   = 0U;
-        uint32_t       height  = 0U;
-        uint32_t       x       = 0U;
-        uint32_t       y       = 0U;
-        uint8_t        r       = 0U;
-        uint8_t        g       = 0U;
-        uint8_t        b       = 0U;
+        uint8_t *y_row = NULL;
+        uint8_t *u_plane = NULL;
+        uint8_t *v_plane = NULL;
+        uint32_t width = 0U;
+        uint32_t height = 0U;
+        uint32_t uv_x = 0U;
+        uint32_t uv_y = 0U;
+        uint8_t r = 0U;
+        uint8_t g = 0U;
+        uint8_t b = 0U;
+        int validate_fb = 0;
 
-        if (0 != validate_framebuffers(src, dst)) {
+        validate_fb = validate_framebuffers(src, dst);
+        if (0 != validate_fb) {
+                log_err("Invalid framebuffers for RGB888 -> YUV420P conversion");
+
                 return VF_CONV_PROCESSING_ERR;
         }
 
-        width  = src->params.width;
+        width = src->params.width;
         height = src->params.height;
 
         u_plane = dst->data + dst->plane_size[0];
-        v_plane = u_plane   + dst->plane_size[1];
+        v_plane = u_plane + dst->plane_size[1];
 
-        for (y = 0U; y < height; y++) {
+        for (uint32_t y = 0U; y < height; y++) {
                 src_row = src->data + y * src->plane_stride[0];
-                y_row   = dst->data + y * dst->plane_stride[0];
+                y_row = dst->data + y * dst->plane_stride[0];
 
-                for (x = 0U; x < width; x++) {
+                for (uint32_t x = 0U; x < width; x++) {
                         r = src_row[x * 3U + 0U];
                         g = src_row[x * 3U + 1U];
                         b = src_row[x * 3U + 2U];
@@ -247,9 +257,9 @@ vf_err_t convert_rgb888_to_yuv420p(const vf_framebuffer_t *src, vf_framebuffer_t
                         y_row[x] = rgb_to_y(r, g, b);
 
                         /* U and V sampled once per 2x2 block */
-                        if ((0U == (y & 1U)) && (0U == (x & 1U))) {
-                                uint32_t uv_x = x / 2U;
-                                uint32_t uv_y = y / 2U;
+                        if (true == IS_UV_SAMPLE_POINT(x, y)) {
+                                uv_x = x / 2U;
+                                uv_y = y / 2U;
 
                                 u_plane[uv_y * dst->plane_stride[1] + uv_x] = rgb_to_u(r, g, b);
                                 v_plane[uv_y * dst->plane_stride[2] + uv_x] = rgb_to_v(r, g, b);
@@ -270,32 +280,36 @@ static
 vf_err_t convert_bgr888_to_yuv420p(const vf_framebuffer_t *src, vf_framebuffer_t *dst)
 {
         const uint8_t *src_row = NULL;
-        uint8_t       *y_row   = NULL;
-        uint8_t       *u_plane = NULL;
-        uint8_t       *v_plane = NULL;
-        uint32_t       width   = 0U;
-        uint32_t       height  = 0U;
-        uint32_t       x       = 0U;
-        uint32_t       y       = 0U;
-        uint8_t        r       = 0U;
-        uint8_t        g       = 0U;
-        uint8_t        b       = 0U;
+        uint8_t *y_row = NULL;
+        uint8_t *u_plane = NULL;
+        uint8_t *v_plane = NULL;
+        uint32_t width = 0U;
+        uint32_t height = 0U;
+        uint32_t uv_x = 0U;
+        uint32_t uv_y = 0U;
+        uint8_t r = 0U;
+        uint8_t g = 0U;
+        uint8_t b = 0U;
+        int validate_fb = 0;
 
-        if (0 != validate_framebuffers(src, dst)) {
+        validate_fb = validate_framebuffers(src, dst);
+        if (0 != validate_fb) {
+                log_err("Invalid framebuffers for BGR888 -> YUV420P conversion");
+
                 return VF_CONV_PROCESSING_ERR;
         }
 
-        width  = src->params.width;
+        width = src->params.width;
         height = src->params.height;
 
         u_plane = dst->data + dst->plane_size[0];
-        v_plane = u_plane   + dst->plane_size[1];
+        v_plane = u_plane + dst->plane_size[1];
 
-        for (y = 0U; y < height; y++) {
+        for (uint32_t y = 0U; y < height; y++) {
                 src_row = src->data + y * src->plane_stride[0];
-                y_row   = dst->data + y * dst->plane_stride[0];
+                y_row = dst->data + y * dst->plane_stride[0];
 
-                for (x = 0U; x < width; x++) {
+                for (uint32_t x = 0U; x < width; x++) {
                         /* BGR order */
                         b = src_row[x * 3U + 0U];
                         g = src_row[x * 3U + 1U];
@@ -303,9 +317,9 @@ vf_err_t convert_bgr888_to_yuv420p(const vf_framebuffer_t *src, vf_framebuffer_t
 
                         y_row[x] = rgb_to_y(r, g, b);
 
-                        if ((0U == (y & 1U)) && (0U == (x & 1U))) {
-                                uint32_t uv_x = x / 2U;
-                                uint32_t uv_y = y / 2U;
+                        if (true == IS_UV_SAMPLE_POINT(x, y)) {
+                                uv_x = x / 2U;
+                                uv_y = y / 2U;
 
                                 u_plane[uv_y * dst->plane_stride[1] + uv_x] = rgb_to_u(r, g, b);
                                 v_plane[uv_y * dst->plane_stride[2] + uv_x] = rgb_to_v(r, g, b);
@@ -325,41 +339,45 @@ vf_err_t convert_bgr888_to_yuv420p(const vf_framebuffer_t *src, vf_framebuffer_t
 static
 vf_err_t convert_yuv420p_to_rgb888(const vf_framebuffer_t *src, vf_framebuffer_t *dst)
 {
-        const uint8_t *y_plane  = NULL;
-        const uint8_t *u_plane  = NULL;
-        const uint8_t *v_plane  = NULL;
-        uint8_t       *dst_row  = NULL;
-        uint32_t       width    = 0U;
-        uint32_t       height   = 0U;
-        uint32_t       x        = 0U;
-        uint32_t       y        = 0U;
-        int            yv       = 0;
-        int            c        = 0;
-        int            d        = 0;
-        int            e        = 0;
+        const uint8_t *y_plane = NULL;
+        const uint8_t *u_plane = NULL;
+        const uint8_t *v_plane = NULL;
+        uint8_t *dst_row = NULL;
+        uint32_t width = 0U;
+        uint32_t height = 0U;
+        uint32_t uv_x = 0U;
+        uint32_t uv_y = 0U;
+        int yv = 0;
+        int c = 0;
+        int d = 0;
+        int e = 0;
+        int validate_fb = 0;
 
-        if (0 != validate_framebuffers(src, dst)) {
+        validate_fb = validate_framebuffers(src, dst);
+        if (0 != validate_fb) {
+                log_err("Invalid framebuffers for YUV420P -> RGB888 conversion");
+
                 return VF_CONV_PROCESSING_ERR;
         }
 
-        width   = src->params.width;
-        height  = src->params.height;
+        width = src->params.width;
+        height = src->params.height;
 
         y_plane = src->data;
         u_plane = y_plane + src->plane_size[0];
         v_plane = u_plane + src->plane_size[1];
 
-        for (y = 0U; y < height; y++) {
+        for (uint32_t y = 0U; y < height; y++) {
                 dst_row = dst->data + y * dst->plane_stride[0];
 
-                for (x = 0U; x < width; x++) {
-                        uint32_t uv_x = x / 2U;
-                        uint32_t uv_y = y / 2U;
+                for (uint32_t x = 0U; x < width; x++) {
+                        uv_x = x / 2U;
+                        uv_y = y / 2U;
 
                         yv = (int)y_plane[y * src->plane_stride[0] + x];
-                        c  = yv - 16;
-                        d  = (int)u_plane[uv_y * src->plane_stride[1] + uv_x] - 128;
-                        e  = (int)v_plane[uv_y * src->plane_stride[2] + uv_x] - 128;
+                        c = yv - 16;
+                        d = (int)u_plane[uv_y * src->plane_stride[1] + uv_x] - 128;
+                        e = (int)v_plane[uv_y * src->plane_stride[2] + uv_x] - 128;
 
                         dst_row[x * 3U + 0U] = yuv_to_r(c, e);
                         dst_row[x * 3U + 1U] = yuv_to_g(c, d, e);
@@ -379,30 +397,34 @@ vf_err_t convert_yuv420p_to_rgb888(const vf_framebuffer_t *src, vf_framebuffer_t
 static
 vf_err_t convert_rgb888_to_nv12(const vf_framebuffer_t *src, vf_framebuffer_t *dst)
 {
-        const uint8_t *src_row  = NULL;
-        uint8_t       *y_row    = NULL;
-        uint8_t       *uv_plane = NULL;
-        uint32_t       width    = 0U;
-        uint32_t       height   = 0U;
-        uint32_t       x        = 0U;
-        uint32_t       y        = 0U;
-        uint8_t        r        = 0U;
-        uint8_t        g        = 0U;
-        uint8_t        b        = 0U;
+        const uint8_t *src_row = NULL;
+        uint8_t *y_row = NULL;
+        uint8_t *uv_plane = NULL;
+        uint32_t width = 0U;
+        uint32_t height = 0U;
+        uint32_t uv_x = 0U;
+        uint32_t uv_y = 0U;
+        uint8_t r = 0U;
+        uint8_t g = 0U;
+        uint8_t b = 0U;
+        int validate_fb = 0;
 
-        if (0 != validate_framebuffers(src, dst)) {
+        validate_fb = validate_framebuffers(src, dst);
+        if (0 != validate_fb) {
+                log_err("Invalid framebuffers for RGB888 -> NV12 conversion");
+
                 return VF_CONV_PROCESSING_ERR;
         }
 
-        width   = src->params.width;
-        height  = src->params.height;
+        width = src->params.width;
+        height = src->params.height;
         uv_plane = dst->data + dst->plane_size[0];
 
-        for (y = 0U; y < height; y++) {
+        for (uint32_t y = 0U; y < height; y++) {
                 src_row = src->data + y * src->plane_stride[0];
-                y_row   = dst->data + y * dst->plane_stride[0];
+                y_row = dst->data + y * dst->plane_stride[0];
 
-                for (x = 0U; x < width; x++) {
+                for (uint32_t x = 0U; x < width; x++) {
                         r = src_row[x * 3U + 0U];
                         g = src_row[x * 3U + 1U];
                         b = src_row[x * 3U + 2U];
@@ -410,9 +432,9 @@ vf_err_t convert_rgb888_to_nv12(const vf_framebuffer_t *src, vf_framebuffer_t *d
                         y_row[x] = rgb_to_y(r, g, b);
 
                         /* UV interleaved: U at even, V at odd, sampled per 2x2 block */
-                        if ((0U == (y & 1U)) && (0U == (x & 1U))) {
-                                uint32_t uv_x = x;
-                                uint32_t uv_y = y / 2U;
+                        if (true == IS_UV_SAMPLE_POINT(x, y)) {
+                                uv_x = x;
+                                uv_y = y / 2U;
 
                                 uv_plane[uv_y * dst->plane_stride[1] + uv_x + 0U] = rgb_to_u(r, g, b);
                                 uv_plane[uv_y * dst->plane_stride[1] + uv_x + 1U] = rgb_to_v(r, g, b);
@@ -432,33 +454,37 @@ vf_err_t convert_rgb888_to_nv12(const vf_framebuffer_t *src, vf_framebuffer_t *d
 static
 vf_err_t convert_nv12_to_rgb888(const vf_framebuffer_t *src, vf_framebuffer_t *dst)
 {
-        const uint8_t *y_plane  = NULL;
+        const uint8_t *y_plane = NULL;
         const uint8_t *uv_plane = NULL;
-        uint8_t       *dst_row  = NULL;
-        uint32_t       width    = 0U;
-        uint32_t       height   = 0U;
-        uint32_t       x        = 0U;
-        uint32_t       y        = 0U;
-        int            c        = 0;
-        int            d        = 0;
-        int            e        = 0;
+        uint8_t *dst_row = NULL;
+        uint32_t width = 0U;
+        uint32_t height = 0U;
+        uint32_t uv_x = 0U;
+        uint32_t uv_y = 0U;
+        int c = 0;
+        int d = 0;
+        int e = 0;
+        int validate_fb = 0;
 
-        if (0 != validate_framebuffers(src, dst)) {
+        validate_fb = validate_framebuffers(src, dst);
+        if (0 != validate_fb) {
+                log_err("Invalid framebuffers for NV12 -> RGB888 conversion");
+
                 return VF_CONV_PROCESSING_ERR;
         }
 
-        width   = src->params.width;
-        height  = src->params.height;
+        width = src->params.width;
+        height = src->params.height;
 
-        y_plane  = src->data;
+        y_plane = src->data;
         uv_plane = y_plane + src->plane_size[0];
 
-        for (y = 0U; y < height; y++) {
+        for (uint32_t y = 0U; y < height; y++) {
                 dst_row = dst->data + y * dst->plane_stride[0];
 
-                for (x = 0U; x < width; x++) {
-                        uint32_t uv_y = y / 2U;
-                        uint32_t uv_x = (x & ~1U); /* align to even */
+                for (uint32_t x = 0U; x < width; x++) {
+                        uv_y = y / 2U;
+                        uv_x = (x & ~1U); /* align to even */
 
                         c = (int)y_plane[y * src->plane_stride[0] + x] - 16;
                         d = (int)uv_plane[uv_y * src->plane_stride[1] + uv_x + 0U] - 128;
@@ -480,8 +506,8 @@ vf_err_t convert_nv12_to_rgb888(const vf_framebuffer_t *src, vf_framebuffer_t *d
  * ========================================================================= */
 
 typedef struct {
-        vf_pixel_fmt_t  src_fmt;
-        vf_pixel_fmt_t  dst_fmt;
+        vf_pixel_fmt_t src_fmt;
+        vf_pixel_fmt_t dst_fmt;
         vf_convert_fn_t fn;
 } vf_conversion_entry_t;
 
@@ -517,9 +543,8 @@ vf_convert_fn_t lookup_convert_fn(vf_pixel_fmt_t src_fmt, vf_pixel_fmt_t dst_fmt
  * Public API
  * ========================================================================= */
 
-vf_err_t vf_conversion_init(vf_conversion_ctx_t *ctx,
-                             vf_pixel_fmt_t       src_fmt,
-                             vf_pixel_fmt_t       dst_fmt)
+vf_err_t vf_conversion_init(vf_conversion_ctx_t *ctx, vf_pixel_fmt_t src_fmt,
+                            vf_pixel_fmt_t dst_fmt)
 {
         vf_convert_fn_t fn = NULL;
 
@@ -540,9 +565,9 @@ vf_err_t vf_conversion_init(vf_conversion_ctx_t *ctx,
                 return VF_CONV_INIT_ERR;
         }
 
-        ctx->src_fmt     = src_fmt;
-        ctx->dst_fmt     = dst_fmt;
-        ctx->convert_fn  = fn;
+        ctx->src_fmt = src_fmt;
+        ctx->dst_fmt = dst_fmt;
+        ctx->convert_fn = fn;
         ctx->initialized = 1;
 
         log_info("Conversion initialized: %s -> %s",
@@ -552,9 +577,8 @@ vf_err_t vf_conversion_init(vf_conversion_ctx_t *ctx,
         return VF_SUCCESS;
 }
 
-vf_err_t vf_conversion_process(vf_conversion_ctx_t    *ctx,
-                                const vf_framebuffer_t *src,
-                                vf_framebuffer_t       *dst)
+vf_err_t vf_conversion_process(vf_conversion_ctx_t *ctx, const vf_framebuffer_t *src,
+                               vf_framebuffer_t *dst)
 {
         if (NULL == ctx) {
                 log_err("Invalid param: ctx=NULL");

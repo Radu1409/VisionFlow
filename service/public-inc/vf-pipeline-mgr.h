@@ -24,10 +24,6 @@
 #include "vf-error.h"
 #include "vf-processing-unit.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define VF_PIPELINE_MAX_UNITS  8U
 #define VF_PIPELINE_NAME_LEN   64U
 
@@ -40,18 +36,10 @@ typedef struct {
 } vf_pipeline_t;
 
 vf_err_t vf_pipeline_init(vf_pipeline_t *pipeline, const char *name);
-
 vf_err_t vf_pipeline_add_unit(vf_pipeline_t *pipeline, vf_unit_t *unit);
-
 vf_err_t vf_pipeline_create(vf_pipeline_t *pipeline);
-
 vf_err_t vf_pipeline_run_once(vf_pipeline_t *pipeline);
-
-void     vf_pipeline_destroy(vf_pipeline_t *pipeline);
-
-#ifdef __cplusplus
-}
-#endif
+void vf_pipeline_destroy(vf_pipeline_t *pipeline);
 
 #endif /* VF_PIPELINE_MGR_H */
 

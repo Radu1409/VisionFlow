@@ -25,20 +25,30 @@
 #include "vf-framebuffer.h"
 #include "vf-logger.h"
 
-#define TEST_WIDTH  64U
-#define TEST_HEIGHT 64U
+#define DEFAULT_WIDTH       64U
+#define DEFAULT_HEIGHT      64U
+
+#define DEFAULT_RED_R       255U
+#define DEFAULT_RED_G       0U
+#define DEFAULT_RED_B       0U
+
+#define DEFAULT_YUV_RED_Y   81U
+#define DEFAULT_YUV_RED_U   90U
+#define DEFAULT_YUV_RED_V   240U
+
+#define DEFAULT_GRAY_VALUE  128U
 
 static
 int test_rgb888_to_yuv420p(void)
 {
-        vf_framebuffer_t    src        = { 0 };
-        vf_framebuffer_t    dst        = { 0 };
-        vf_conversion_ctx_t ctx        = { 0 };
-        vf_fb_params_t      src_params = { TEST_WIDTH, TEST_HEIGHT, VF_PIXEL_FMT_RGB888 };
-        vf_fb_params_t      dst_params = { TEST_WIDTH, TEST_HEIGHT, VF_PIXEL_FMT_YUV420P };
-        vf_err_t            err        = VF_SUCCESS;
-        uint32_t            i          = 0U;
-        uint8_t            *p          = NULL;
+        vf_framebuffer_t src = {0};
+        vf_framebuffer_t dst = {0};
+        vf_conversion_ctx_t ctx = {0};
+        vf_fb_params_t src_params = {DEFAULT_WIDTH, DEFAULT_HEIGHT, VF_PIXEL_FMT_RGB888};
+        vf_fb_params_t dst_params = {DEFAULT_WIDTH, DEFAULT_HEIGHT, VF_PIXEL_FMT_YUV420P};
+        uint32_t i = 0U;
+        uint8_t *p = NULL;
+        vf_err_t err = VF_SUCCESS;
 
         log_info("--- test_rgb888_to_yuv420p ---");
 
@@ -60,10 +70,10 @@ int test_rgb888_to_yuv420p(void)
 
         /* Fill src with a solid red pattern */
         p = src.data;
-        for (i = 0U; i < TEST_WIDTH * TEST_HEIGHT; i++) {
-                p[i * 3U + 0U] = 255U; /* R */
-                p[i * 3U + 1U] = 0U;   /* G */
-                p[i * 3U + 2U] = 0U;   /* B */
+        for (i = 0U; i < DEFAULT_WIDTH * DEFAULT_HEIGHT; i++) {
+                p[i * 3U + 0U] = DEFAULT_RED_R;   /* R */
+                p[i * 3U + 1U] = DEFAULT_RED_G;   /* G */
+                p[i * 3U + 2U] = DEFAULT_RED_B;   /* B */
         }
 
         err = vf_conversion_init(&ctx, VF_PIXEL_FMT_RGB888, VF_PIXEL_FMT_YUV420P);
@@ -110,12 +120,12 @@ int test_rgb888_to_yuv420p(void)
 static
 int test_yuv420p_to_rgb888(void)
 {
-        vf_framebuffer_t    src        = { 0 };
-        vf_framebuffer_t    dst        = { 0 };
-        vf_conversion_ctx_t ctx        = { 0 };
-        vf_fb_params_t      src_params = { TEST_WIDTH, TEST_HEIGHT, VF_PIXEL_FMT_YUV420P };
-        vf_fb_params_t      dst_params = { TEST_WIDTH, TEST_HEIGHT, VF_PIXEL_FMT_RGB888 };
-        vf_err_t            err        = VF_SUCCESS;
+        vf_framebuffer_t src = {0};
+        vf_framebuffer_t dst = {0};
+        vf_conversion_ctx_t ctx = {0};
+        vf_fb_params_t src_params = {DEFAULT_WIDTH, DEFAULT_HEIGHT, VF_PIXEL_FMT_YUV420P};
+        vf_fb_params_t dst_params = {DEFAULT_WIDTH, DEFAULT_HEIGHT, VF_PIXEL_FMT_RGB888};
+        vf_err_t err = VF_SUCCESS;
 
         log_info("--- test_yuv420p_to_rgb888 ---");
 
@@ -136,9 +146,10 @@ int test_yuv420p_to_rgb888(void)
         }
 
         /* Fill with valid YUV values: Y=81 U=90 V=240 approximates red */
-        (void)memset(src.data, 81U, src.plane_size[0]);
-        (void)memset(src.data + src.plane_size[0], 90U, src.plane_size[1]);
-        (void)memset(src.data + src.plane_size[0] + src.plane_size[1], 240U, src.plane_size[2]);
+        (void)memset(src.data, DEFAULT_YUV_RED_Y, src.plane_size[0]);
+        (void)memset(src.data + src.plane_size[0], DEFAULT_YUV_RED_U, src.plane_size[1]);
+        (void)memset(src.data + src.plane_size[0] + src.plane_size[1], DEFAULT_YUV_RED_V,
+                     src.plane_size[2]);
 
         err = vf_conversion_init(&ctx, VF_PIXEL_FMT_YUV420P, VF_PIXEL_FMT_RGB888);
         if (VF_SUCCESS != err) {
@@ -173,12 +184,12 @@ int test_yuv420p_to_rgb888(void)
 static
 int test_rgb888_to_nv12(void)
 {
-        vf_framebuffer_t    src        = { 0 };
-        vf_framebuffer_t    dst        = { 0 };
-        vf_conversion_ctx_t ctx        = { 0 };
-        vf_fb_params_t      src_params = { TEST_WIDTH, TEST_HEIGHT, VF_PIXEL_FMT_RGB888 };
-        vf_fb_params_t      dst_params = { TEST_WIDTH, TEST_HEIGHT, VF_PIXEL_FMT_NV12 };
-        vf_err_t            err        = VF_SUCCESS;
+        vf_framebuffer_t src = {0};
+        vf_framebuffer_t dst = {0};
+        vf_conversion_ctx_t ctx = {0};
+        vf_fb_params_t src_params = {DEFAULT_WIDTH, DEFAULT_HEIGHT, VF_PIXEL_FMT_RGB888};
+        vf_fb_params_t dst_params = {DEFAULT_WIDTH, DEFAULT_HEIGHT, VF_PIXEL_FMT_NV12};
+        vf_err_t err = VF_SUCCESS;
 
         log_info("--- test_rgb888_to_nv12 ---");
 
@@ -198,7 +209,7 @@ int test_rgb888_to_nv12(void)
                 return 1;
         }
 
-        (void)memset(src.data, 128U, src.total_size);
+        (void)memset(src.data, DEFAULT_GRAY_VALUE, src.total_size);
 
         err = vf_conversion_init(&ctx, VF_PIXEL_FMT_RGB888, VF_PIXEL_FMT_NV12);
         if (VF_SUCCESS != err) {
@@ -233,8 +244,8 @@ int test_rgb888_to_nv12(void)
 static
 int test_unsupported_conversion(void)
 {
-        vf_conversion_ctx_t ctx = { 0 };
-        vf_err_t            err = VF_SUCCESS;
+        vf_conversion_ctx_t ctx = {0};
+        vf_err_t err = VF_SUCCESS;
 
         log_info("--- test_unsupported_conversion ---");
 
@@ -254,8 +265,8 @@ int test_unsupported_conversion(void)
 
 int main(void)
 {
-        vf_err_t err    = VF_SUCCESS;
-        int      failed = 0;
+        vf_err_t err = VF_SUCCESS;
+        int failed = 0;
 
         err = vf_logger_init("vf_conversion_test", VF_LOG_LEVEL_DBG);
         if (VF_SUCCESS != err) {

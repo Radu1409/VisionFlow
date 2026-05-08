@@ -27,6 +27,9 @@
 #define FB_FILENAME_MAX_LEN 256U
 #define ONE_LINE            1U
 
+#define VF_MS_PER_SEC       1000ULL
+#define VF_NS_PER_MS        1000000ULL
+
 static
 void reset_plane_info(vf_framebuffer_t *fb)
 {
@@ -58,6 +61,11 @@ void init_planes_packed(vf_framebuffer_t *fb, const vf_fb_params_t *params)
         }
 
         bpp = vf_pixel_fmt_bpp(params->format);
+        if(VF_BPP_INVALID == bpp) {
+                log_err("Invalid pixel format: %d", bpp);
+
+                return;
+        }
 
         fb->num_planes = 1U;
 
@@ -349,22 +357,24 @@ void vf_framebuffer_set_meta(vf_framebuffer_t *fb, uint32_t frame_id, uint32_t s
                              const char *source_name, uint32_t width, uint32_t height,
                              vf_pixel_fmt_t format)
 {
-        struct timespec ts = { 0 };
+        struct timespec ts = {0};
 
-        if (NULL == fb) {
+        if (NULL == fb || NULL == source_name) {
+                log_err("Invalid input: fb=%p, source_name=%p.", (void *)fb, (void *)source_name);
+
                 return;
         }
 
-        fb->meta.frame_id       = frame_id;
+        fb->meta.frame_id = frame_id;
         fb->meta.sequence_index = sequence_index;
-        fb->meta.source_name    = source_name;
-        fb->meta.width          = width;
-        fb->meta.height         = height;
-        fb->meta.format         = format;
+        fb->meta.source_name = source_name;
+        fb->meta.width = width;
+        fb->meta.height = height;
+        fb->meta.format = format;
 
         (void)clock_gettime(CLOCK_MONOTONIC, &ts);
-        fb->meta.timestamp_ms = (uint64_t)(ts.tv_sec * 1000ULL +
-                                           ts.tv_nsec / 1000000ULL);
+        fb->meta.timestamp_ms = (uint64_t)(ts.tv_sec * VF_MS_PER_SEC +
+                                           ts.tv_nsec / VF_NS_PER_MS);
 }
 
 size_t vf_framebuffer_calculate_size(const vf_fb_params_t *params)
@@ -616,21 +626,21 @@ const char *vf_pixel_fmt_str(vf_pixel_fmt_t format)
 {
         switch (format) {
                 case VF_PIXEL_FMT_RGB888:
-                        return "RGB888";
+                        return VF_PIXEL_FMT_RGB888_STR;
                 case VF_PIXEL_FMT_BGR888:
-                        return "BGR888";
+                        return VF_PIXEL_FMT_BGR888_STR;
                 case VF_PIXEL_FMT_RGBA8888:
-                        return "RGBA8888";
+                        return VF_PIXEL_FMT_RGBA8888_STR;
                 case VF_PIXEL_FMT_YUV420P:
-                        return "YUV420P";
+                        return VF_PIXEL_FMT_YUV420P_STR;
                 case VF_PIXEL_FMT_NV12:
-                        return "NV12";
+                        return VF_PIXEL_FMT_NV12_STR;
                 case VF_PIXEL_FMT_RAW8:
-                        return "RAW8";
+                        return VF_PIXEL_FMT_RAW8_STR;
                 case VF_PIXEL_FMT_UNKNOWN:
                 case VF_PIXEL_FMT_LAST:
                 default:
-                        return "UNKNOWN";
+                        return VF_PIXEL_FMT_UNKNOWN_STR;
         }
 }
 

@@ -117,15 +117,15 @@ const char *get_level_str_and_color(vf_log_level_t level, const char **color)
 
 int vf_logger_init(const char *app_name, vf_log_level_t max_verbosity)
 {
-        int err = EOK;
+        int rc = EOK;
 
         if (true == g_logger.initialized) {
                 return EOK; /* Already initialized */
         }
 
-        err = pthread_mutex_init(&g_logger.lock, NULL);
-        if (err != EOK) {
-                vf_log_fprintf("Failed to initialize logger mutex.");
+        rc = pthread_mutex_init(&g_logger.lock, NULL);
+        if (EOK != rc) {
+                vf_log_fprintf("Failed to initialize logger mutex. Error: %d", rc);
 
                 return -1;
         }
@@ -145,7 +145,7 @@ int vf_logger_init(const char *app_name, vf_log_level_t max_verbosity)
 
 void vf_logger_deinit(void)
 {
-        int err = EOK;
+        int rc = EOK;
 
         if (false == g_logger.initialized) {
                 return; /* Already deinitialized */
@@ -155,9 +155,9 @@ void vf_logger_deinit(void)
 
         closelog();
 
-        err = pthread_mutex_destroy(&g_logger.lock);
-        if (err != EOK) {
-                vf_log_fprintf("Failed to destroy logger mutex.");
+        rc = pthread_mutex_destroy(&g_logger.lock);
+        if (EOK != rc) {
+                vf_log_fprintf("Failed to destroy logger mutex. Error: %d", rc);
 
                 return;
         }
@@ -167,20 +167,20 @@ void vf_logger_deinit(void)
 
 void vf_logger_set_verbosity(vf_log_level_t log_level)
 {
-        int err = EOK;
+        int rc = EOK;
 
-        err = pthread_mutex_lock(&g_logger.lock);
-        if (err != EOK) {
-                vf_log_fprintf("Failed to lock logger mutex.");
+        rc = pthread_mutex_lock(&g_logger.lock);
+        if (EOK != rc) {
+                vf_log_fprintf("Failed to lock logger mutex. Error: %d", rc);
 
                 return;
         }
 
         g_logger.max_level = log_level;
 
-        err = pthread_mutex_unlock(&g_logger.lock);
-        if (err != EOK) {
-                vf_log_fprintf("Failed to unlock logger mutex.");
+        rc = pthread_mutex_unlock(&g_logger.lock);
+        if (EOK != rc) {
+                vf_log_fprintf("Failed to unlock logger mutex. Error: %d", rc);
 
                 return;
         }
@@ -201,7 +201,7 @@ void vf_logger_record(vf_log_level_t log_level, const char *file, int line, cons
         struct tm tm_info = {0};
         int syslog_level = 0;
         long millis = 0;
-        int err = EOK;
+        int rc = EOK;
 
         if (NULL == file || NULL == func || NULL == fmt) {
                 vf_log_fprintf("Invalid input: file = %p, func = %p, fmt = %p",
@@ -222,8 +222,8 @@ void vf_logger_record(vf_log_level_t log_level, const char *file, int line, cons
         }
 
         /* 1. Get the current time function thread-safe localtime_r */
-        err = clock_gettime(CLOCK_REALTIME, &ts);
-        if (EOK != err) {
+        rc = clock_gettime(CLOCK_REALTIME, &ts);
+        if (EOK != rc) {
                 log_err("Failed to get current time", strerror(errno));
 
                 return;
@@ -249,9 +249,9 @@ void vf_logger_record(vf_log_level_t log_level, const char *file, int line, cons
                 goto cleanup;
         }
 
-        err = pthread_mutex_lock(&g_logger.lock);
-        if (err != EOK) {
-                vf_log_fprintf("Failed to lock logger mutex.");
+        rc = pthread_mutex_lock(&g_logger.lock);
+        if (EOK != rc) {
+                vf_log_fprintf("Failed to lock logger mutex. Error: %d", rc);
 
                 goto cleanup;
         }
@@ -270,9 +270,9 @@ void vf_logger_record(vf_log_level_t log_level, const char *file, int line, cons
 
         vsyslog(syslog_level, syslog_fmt, args_syslog);
 
-        err = pthread_mutex_unlock(&g_logger.lock);
-        if (err != EOK) {
-                vf_log_fprintf("Failed to unlock logger mutex.");
+        rc = pthread_mutex_unlock(&g_logger.lock);
+        if (EOK != rc) {
+                vf_log_fprintf("Failed to unlock logger mutex. Error: %d", rc);
         }
 
 cleanup:

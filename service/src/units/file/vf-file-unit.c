@@ -28,19 +28,22 @@
 #include "vf-logger.h"
 #include "vf-processing-unit.h"
 
-#define MODULE_NAME "vf_file_unit"
+#define MODULE_NAME               "vf_file_unit"
+
 #define VF_FILE_UNIT_OUT_PATH_MAX 1024U
+#define VF_FILE_UNIT_EXT_MAX_LEN  16U
+#define VF_FILE_BASE_PATH_MAX_LEN 128
 
 typedef struct {
         vf_file_t             file;
-        vf_buf_pool_t         *pool;
-        vf_framebuffer_t      *current_fb;
+        vf_buf_pool_t        *pool;
+        vf_framebuffer_t     *current_fb;
         vf_fb_params_t        fb_params;
         vf_file_unit_mode_t   mode;
         char                  file_path[VF_PARSER_MAX_FULL_PATH_LEN];
         char                  output_dir[VF_PARSER_MAX_FULL_PATH_LEN];
-        char                  output_extension[16];
-        const vf_frame_set_t  *frame_set;
+        char                  output_extension[VF_FILE_UNIT_EXT_MAX_LEN];
+        const vf_frame_set_t *frame_set;
         uint32_t              frame_idx;
         int                   split_output;
 } vf_file_unit_data_t;
@@ -51,10 +54,10 @@ typedef struct {
 
 vf_err_t vf_file_unit_init(void *ctx, ...)
 {
-        vf_unit_t           *unit = NULL;
+        vf_unit_t *unit = NULL;
         vf_file_unit_data_t *data = NULL;
-        vf_file_unit_cfg_t  *cfg  = NULL;
-        vf_err_t             err  = VF_SUCCESS;
+        vf_file_unit_cfg_t *cfg = NULL;
+        vf_err_t err = VF_SUCCESS;
 
         if (NULL == ctx) {
                 log_err("Invalid input: ctx = %p", ctx);
@@ -63,7 +66,7 @@ vf_err_t vf_file_unit_init(void *ctx, ...)
         }
 
         unit = (vf_unit_t *)ctx;
-        cfg  = (vf_file_unit_cfg_t *)unit->internal_data;
+        cfg = (vf_file_unit_cfg_t *)unit->internal_data;
 
         if (NULL == cfg) {
                 log_err("Invalid input: cfg = %p", (void *)cfg);
@@ -86,11 +89,11 @@ vf_err_t vf_file_unit_init(void *ctx, ...)
 
         (void)snprintf(data->file_path, sizeof(data->file_path), "%s", cfg->file_path);
 
-        data->fb_params    = cfg->fb_params;
-        data->pool         = cfg->pool;
-        data->mode         = cfg->mode;
-        data->frame_set    = cfg->frame_set;
-        data->frame_idx    = 0U;
+        data->fb_params = cfg->fb_params;
+        data->pool = cfg->pool;
+        data->mode = cfg->mode;
+        data->frame_set = cfg->frame_set;
+        data->frame_idx = 0U;
         data->split_output = cfg->split_output;
 
         if (NULL != cfg->output_dir) {
@@ -145,7 +148,7 @@ vf_err_t vf_file_unit_init(void *ctx, ...)
 
 vf_err_t vf_file_unit_deinit(void *ctx, ...)
 {
-        vf_unit_t           *unit = NULL;
+        vf_unit_t *unit = NULL;
         vf_file_unit_data_t *data = NULL;
 
         if (NULL == ctx) {
@@ -179,10 +182,11 @@ vf_err_t vf_file_unit_deinit(void *ctx, ...)
 
 vf_err_t vf_file_unit_get_data(void *ctx, ...)
 {
-        vf_unit_t            *unit = NULL;
-        vf_file_unit_data_t  *data = NULL;
-        vf_err_t             err  = VF_SUCCESS;
-        size_t               read = 0U;
+        vf_unit_t *unit = NULL;
+        vf_file_unit_data_t *data = NULL;
+        size_t read = 0U;
+        vf_err_t err = VF_SUCCESS;
+        vf_err_t buff_release_err = VF_SUCCESS;
 
         if (NULL == ctx) {
                 log_err("Invalid input: ctx = %p", ctx);
@@ -233,7 +237,12 @@ vf_err_t vf_file_unit_get_data(void *ctx, ...)
                 if (VF_SUCCESS != err) {
                         log_err("Failed to read frame from file: %s", vf_err2str(err));
 
-                        (void)vf_buf_pool_release(data->pool, data->current_fb);
+                        buff_release_err = vf_buf_pool_release(data->pool, data->current_fb);
+                        if (VF_SUCCESS != buff_release_err) {
+                                log_err("Failed to release framebuffer back to pool: %s",
+                                        vf_err2str(buff_release_err));
+                        }
+
                         data->current_fb = NULL;
 
                         return err;
@@ -282,13 +291,16 @@ vf_err_t vf_file_unit_process_data(void *ctx, ...)
 
         return VF_SUCCESS;
 }
+
 vf_err_t vf_file_unit_send_data(void *ctx, ...)
 {
-        vf_unit_t            *unit    = NULL;
-        vf_file_unit_data_t  *data    = NULL;
-        vf_err_t             err     = VF_SUCCESS;
-        size_t               written = 0U;
+        vf_unit_t *unit = NULL;
+        vf_file_unit_data_t *data = NULL;
         char out_path[VF_FILE_UNIT_OUT_PATH_MAX] = {0};
+        size_t written = 0U;
+        vf_err_t err = VF_SUCCESS;
+        vf_err_t buff_release_err = VF_SUCCESS;
+        vf_err_t notify_err = VF_SUCCESS;
 
         if (NULL == ctx) {
                 log_err("Invalid input: ctx = %p", ctx);
@@ -318,7 +330,11 @@ vf_err_t vf_file_unit_send_data(void *ctx, ...)
                         log_err("FILE_IN unit '%s' has no out_queue",
                                 unit->name ? unit->name : "unknown");
 
-                        (void)vf_buf_pool_release(data->pool, data->current_fb);
+                        buff_release_err = vf_buf_pool_release(data->pool, data->current_fb);
+                        if (VF_SUCCESS != buff_release_err) {
+                                log_err("Failed to release framebuffer back to pool: %s",
+                                        vf_err2str(buff_release_err));
+                        }
 
                         data->current_fb = NULL;
 
@@ -329,15 +345,24 @@ vf_err_t vf_file_unit_send_data(void *ctx, ...)
                 if (VF_SUCCESS != err) {
                         log_err("Failed to push frame to out_queue: %s", vf_err2str(err));
 
-                        (void)vf_buf_pool_release(data->pool, data->current_fb);
+                        buff_release_err = vf_buf_pool_release(data->pool, data->current_fb);
+                        if (VF_SUCCESS != buff_release_err) {
+                                log_err("Failed to release framebuffer back to pool: %s",
+                                        vf_err2str(buff_release_err));
+                        }
 
                         data->current_fb = NULL;
 
                         return err;
                 }
 
-                (void)vf_notifier_publish(&unit->notifier, VF_NOTIFIER_EVENT_FRAME_READY,
+                notify_err = vf_notifier_publish(&unit->notifier, VF_NOTIFIER_EVENT_FRAME_READY,
                                           data->current_fb);
+                if (VF_SUCCESS != notify_err) {
+                        log_err("Failed to publish frame-ready notification for unit '%s': %s",
+                                unit->name ? unit->name : "unknown",
+                                vf_err2str(notify_err));
+                }
 
                 log_dbg("FILE_IN: frame pushed to out_queue");
         } else {
@@ -349,8 +374,8 @@ vf_err_t vf_file_unit_send_data(void *ctx, ...)
                         if (NULL != data->frame_set) {
                                 const char *frame_name =
                                         data->frame_set->frames[data->frame_idx].file_name;
-                                char base_name[128] = {0};
-                                char       *dot            = NULL;
+                                char base_name[VF_FILE_BASE_PATH_MAX_LEN] = {0};
+                                char *dot = NULL;
 
                                 (void)snprintf(base_name, sizeof(base_name), "%s", frame_name);
 
@@ -380,7 +405,12 @@ vf_err_t vf_file_unit_send_data(void *ctx, ...)
                                         out_path, vf_err2str(err));
 
                                 if (NULL != data->pool) {
-                                        (void)vf_buf_pool_release(data->pool, data->current_fb);
+                                        buff_release_err = vf_buf_pool_release(data->pool,
+                                                                               data->current_fb);
+                                        if (VF_SUCCESS != buff_release_err) {
+                                                log_err("Failed to release framebuffer back to pool: %s",
+                                                        vf_err2str(buff_release_err));
+                                        }
                                 }
 
                                 data->current_fb = NULL;
@@ -389,19 +419,21 @@ vf_err_t vf_file_unit_send_data(void *ctx, ...)
                         }
                 }
 
-                err = vf_framebuffer_write_to_fptr(data->current_fb,
-                                                    data->file.fp,
-                                                    &written);
+                err = vf_framebuffer_write_to_fptr(data->current_fb, data->file.fp,
+                                                   &written);
                 if (VF_SUCCESS != err) {
                         log_err("Failed to write frame to file: %s", vf_err2str(err));
                 }
 
-                log_dbg("FILE_OUT: wrote %zu bytes to '%s'",
-                        written,
+                log_dbg("FILE_OUT: wrote %zu bytes to '%s'", written,
                         (1 == data->split_output) ? out_path : data->file_path);
 
                 if (NULL != data->pool) {
-                        (void)vf_buf_pool_release(data->pool, data->current_fb);
+                        buff_release_err = vf_buf_pool_release(data->pool, data->current_fb);
+                        if (VF_SUCCESS != buff_release_err) {
+                                log_err("Failed to release framebuffer back to pool: %s",
+                                        vf_err2str(buff_release_err));
+                        }
                 }
 
                 data->current_fb = NULL;
@@ -421,11 +453,11 @@ vf_err_t vf_file_unit_init_operations(vf_unit_operations_t *ops)
                 return VF_INVALID_PARAMETER;
         }
 
-        ops->init         = vf_file_unit_init;
-        ops->deinit       = vf_file_unit_deinit;
-        ops->get_data     = vf_file_unit_get_data;
+        ops->init = vf_file_unit_init;
+        ops->deinit = vf_file_unit_deinit;
+        ops->get_data = vf_file_unit_get_data;
         ops->process_data = vf_file_unit_process_data;
-        ops->send_data    = vf_file_unit_send_data;
+        ops->send_data = vf_file_unit_send_data;
 
         log_info("File unit operations initialized");
 

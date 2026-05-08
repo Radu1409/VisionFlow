@@ -31,10 +31,14 @@
 #include "vf-pipeline-mgr.h"
 #include "vf-processing-unit.h"
 
-#define MODULE_NAME      "vf_core"
-#define CFG_PATH         "vf_frames/conf/vf_frames_cfg.json"
-#define POOL_SLOT_COUNT  4U
-#define CONCAT_FILE_NAME "frame_out"
+#define MODULE_NAME                 "vf_core"
+#define CFG_PATH                    "vf_frames/conf/vf_frames_cfg.json"
+#define POOL_SLOT_COUNT             4U
+#define CONCAT_FILE_NAME            "frame_out"
+
+#define VF_UNIT_NAME_CONVERSION_STR "conversion"
+#define VF_UNIT_NAME_FILE_IN_STR    "file_in"
+#define VF_UNIT_NAME_FILE_OUT_STR   "file_out"
 
 /* =========================================================================
  * Scenario descriptor
@@ -147,6 +151,8 @@ const vf_frame_set_t *find_frame_set(const vf_frames_cfg_t *cfg, const char *nam
         uint32_t i = 0U;
 
         if ((NULL == cfg) || (NULL == name)) {
+                log_err("Invalid params: cfg=%p, name=%p", (void *)cfg, (void *)name);
+
                 return NULL;
         }
 
@@ -160,11 +166,17 @@ const vf_frame_set_t *find_frame_set(const vf_frames_cfg_t *cfg, const char *nam
 }
 
 static
-vf_err_t run_pipeline_for_frames(vf_pipeline_t        *pipeline,
-                                  const vf_frame_set_t *frame_set)
+vf_err_t run_pipeline_for_frames(vf_pipeline_t *pipeline, const vf_frame_set_t *frame_set)
 {
+        uint32_t i = 0U;
         vf_err_t err = VF_SUCCESS;
-        uint32_t i   = 0U;
+
+        if ((NULL == pipeline) || (NULL == frame_set)) {
+                log_err("Invalid params: pipeline=%p, frame_set=%p",
+                        (void *)pipeline, (void *)frame_set);
+
+                return VF_INVALID_PARAMETER;
+        }
 
         for (i = 0U; i < frame_set->frame_count; i++) {
                 log_info("Processing frame [%u/%u]: '%s'",
@@ -197,26 +209,25 @@ void on_frame_ready(vf_notifier_event_t event, void *data, void *ctx)
  * ========================================================================= */
 
 static
-vf_err_t run_scenario(const vf_scenario_t  *scenario,
-                      const vf_frames_cfg_t *cfg)
+vf_err_t run_scenario(const vf_scenario_t *scenario, const vf_frames_cfg_t *cfg)
 {
-        vf_err_t                  err              = VF_SUCCESS;
+        char                      concat_path[VF_PARSER_MAX_FULL_PATH_LEN] = {0};
         const vf_frame_set_t     *frame_set        = NULL;
-        vf_buf_pool_t             pool_in          = { 0 };
-        vf_buf_pool_t             pool_out         = { 0 };
-        vf_fb_params_t            params_in        = { 0 };
-        vf_fb_params_t            params_out       = { 0 };
-        vf_file_unit_cfg_t        file_in_cfg      = { 0 };
-        vf_file_unit_cfg_t        file_out_cfg     = { 0 };
-        vf_conversion_unit_cfg_t  conv_cfg         = { 0 };
-        vf_unit_t                 file_in_unit     = { 0 };
-        vf_unit_t                 conv_unit        = { 0 };
-        vf_unit_t                 file_out_unit    = { 0 };
-        vf_pipeline_t             pipeline         = { 0 };
+        vf_buf_pool_t             pool_in          = {0};
+        vf_buf_pool_t             pool_out         = {0};
+        vf_fb_params_t            params_in        = {0};
+        vf_fb_params_t            params_out       = {0};
+        vf_file_unit_cfg_t        file_in_cfg      = {0};
+        vf_file_unit_cfg_t        file_out_cfg     = {0};
+        vf_conversion_unit_cfg_t  conv_cfg         = {0};
+        vf_unit_t                 file_in_unit     = {0};
+        vf_unit_t                 conv_unit        = {0};
+        vf_unit_t                 file_out_unit    = {0};
+        vf_pipeline_t             pipeline         = {0};
         int                       pool_in_init     = 0;
         int                       pool_out_init    = 0;
         int                       pipeline_created = 0;
-        char                      concat_path[VF_PARSER_MAX_FULL_PATH_LEN] = { 0 };
+        vf_err_t                  err              = VF_SUCCESS;
 
         log_info("=== Running scenario: %s ===", scenario->name);
 
@@ -239,11 +250,11 @@ vf_err_t run_scenario(const vf_scenario_t  *scenario,
         /* ----------------------------------------------------------------
          * 2. Setup framebuffer params
          * ---------------------------------------------------------------- */
-        params_in.width  = frame_set->frames[0].width;
+        params_in.width = frame_set->frames[0].width;
         params_in.height = frame_set->frames[0].height;
         params_in.format = scenario->src_fmt;
 
-        params_out.width  = params_in.width;
+        params_out.width = params_in.width;
         params_out.height = params_in.height;
         params_out.format = scenario->dst_fmt;
 
@@ -273,37 +284,45 @@ vf_err_t run_scenario(const vf_scenario_t  *scenario,
          * ---------------------------------------------------------------- */
 
         /* FILE_IN */
-        file_in_cfg.frame_set        = frame_set;
-        file_in_cfg.fb_params        = params_in;
-        file_in_cfg.pool             = &pool_in;
-        file_in_cfg.mode             = VF_FILE_UNIT_MODE_IN;
-        file_in_cfg.split_output     = 0;
+        file_in_cfg.frame_set = frame_set;
+        file_in_cfg.fb_params = params_in;
+        file_in_cfg.pool = &pool_in;
+        file_in_cfg.mode = VF_FILE_UNIT_MODE_IN;
+        file_in_cfg.split_output = 0;
         file_in_cfg.output_extension = NULL;
 
         (void)snprintf(file_in_cfg.file_path, sizeof(file_in_cfg.file_path),
                        "%s", frame_set->frames[0].full_path);
 
         file_in_unit.type = VF_UNIT_TYPE_FILE_IN;
-        file_in_unit.name = "file_in";
-        (void)vf_file_unit_init_operations(&file_in_unit.operations);
+        file_in_unit.name = VF_UNIT_NAME_FILE_IN_STR;
+
+        err = vf_file_unit_init_operations(&file_in_unit.operations);
+        if (VF_SUCCESS != err) {
+                log_err("File unit init IN operations failed!");
+        }
 
         /* CONVERSION */
-        conv_cfg.src_fmt    = scenario->src_fmt;
-        conv_cfg.dst_fmt    = scenario->dst_fmt;
+        conv_cfg.src_fmt = scenario->src_fmt;
+        conv_cfg.dst_fmt = scenario->dst_fmt;
         conv_cfg.dst_params = params_out;
-        conv_cfg.pool       = &pool_out;
-        conv_cfg.src_pool   = &pool_in;
+        conv_cfg.pool = &pool_out;
+        conv_cfg.src_pool = &pool_in;
 
         conv_unit.type = VF_UNIT_TYPE_CONVERSION;
-        conv_unit.name = "conversion";
-        (void)vf_conversion_unit_init_operations(&conv_unit.operations);
+        conv_unit.name = VF_UNIT_NAME_CONVERSION_STR;
+
+        err = vf_conversion_unit_init_operations(&conv_unit.operations);
+        if (VF_SUCCESS != err) {
+                log_err("Conversion unit init operations failed!");
+        }
 
         /* FILE_OUT */
-        file_out_cfg.frame_set        = frame_set;
-        file_out_cfg.fb_params        = params_out;
-        file_out_cfg.pool             = &pool_out;
-        file_out_cfg.mode             = VF_FILE_UNIT_MODE_OUT;
-        file_out_cfg.split_output     = scenario->split_output;
+        file_out_cfg.frame_set = frame_set;
+        file_out_cfg.fb_params = params_out;
+        file_out_cfg.pool = &pool_out;
+        file_out_cfg.mode = VF_FILE_UNIT_MODE_OUT;
+        file_out_cfg.split_output = scenario->split_output;
         file_out_cfg.output_extension = scenario->output_extension;
 
         (void)snprintf(file_out_cfg.output_dir, sizeof(file_out_cfg.output_dir),
@@ -320,14 +339,18 @@ vf_err_t run_scenario(const vf_scenario_t  *scenario,
         }
 
         file_out_unit.type = VF_UNIT_TYPE_FILE_OUT;
-        file_out_unit.name = "file_out";
-        (void)vf_file_unit_init_operations(&file_out_unit.operations);
+        file_out_unit.name = VF_UNIT_NAME_FILE_OUT_STR;
+
+        err = vf_file_unit_init_operations(&file_out_unit.operations);
+        if (VF_SUCCESS != err) {
+                log_err("File unit init OUT operations failed!");
+        }
 
         /* ----------------------------------------------------------------
          * 5. Store configs in internal_data before pipeline_create
          * ---------------------------------------------------------------- */
-        file_in_unit.internal_data  = &file_in_cfg;
-        conv_unit.internal_data     = &conv_cfg;
+        file_in_unit.internal_data = &file_in_cfg;
+        conv_unit.internal_data = &conv_cfg;
         file_out_unit.internal_data = &file_out_cfg;
 
         /* ----------------------------------------------------------------
@@ -341,13 +364,30 @@ vf_err_t run_scenario(const vf_scenario_t  *scenario,
         }
 
         err = vf_pipeline_add_unit(&pipeline, &file_in_unit);
-        if (VF_SUCCESS != err) { goto cleanup_pool_out; }
+        if (VF_SUCCESS != err) {
+                log_err("Failed to add unit '%s' to pipeline: %s",
+                        file_in_unit.name, vf_err2str(err));
+
+                goto cleanup_pool_out;
+        }
 
         err = vf_pipeline_add_unit(&pipeline, &conv_unit);
-        if (VF_SUCCESS != err) { goto cleanup_pool_out; }
+        if (VF_SUCCESS != err) {
+                log_err("Failed to add unit '%s' to pipeline: %s",
+                        conv_unit.name,
+                        vf_err2str(err));
+
+                goto cleanup_pool_out;
+        }
 
         err = vf_pipeline_add_unit(&pipeline, &file_out_unit);
-        if (VF_SUCCESS != err) { goto cleanup_pool_out; }
+        if (VF_SUCCESS != err) {
+                log_err("Failed to add unit '%s' to pipeline: %s",
+                        file_out_unit.name,
+                        vf_err2str(err));
+
+                goto cleanup_pool_out;
+        }
 
         err = vf_pipeline_create(&pipeline);
         if (VF_SUCCESS != err) {
@@ -358,9 +398,13 @@ vf_err_t run_scenario(const vf_scenario_t  *scenario,
 
         pipeline_created = 1;
 
-        (void)vf_notifier_subscribe(&file_in_unit.notifier,
+        err = vf_notifier_subscribe(&file_in_unit.notifier,
                                     VF_NOTIFIER_EVENT_FRAME_READY,
                                     on_frame_ready, NULL);
+        if (VF_SUCCESS != err) {
+                log_err("Failed to subscribe to frame ready event on FILE_IN notifier: %s",
+                        vf_err2str(err));
+        }
 
         /* ----------------------------------------------------------------
          * 7. Run pipeline for each frame
@@ -399,10 +443,10 @@ cleanup_pool_in:
 
 vf_err_t vf_core_run_all(void)
 {
-        vf_err_t       err      = VF_SUCCESS;
-        vf_frames_cfg_t *cfg   = NULL;
-        size_t          i      = 0U;
-        int             failed = 0;
+        vf_err_t err = VF_SUCCESS;
+        vf_frames_cfg_t *cfg = NULL;
+        size_t i = 0U;
+        int failed = 0;
 
         err = vf_parser_load_frames_cfg(CFG_PATH, &cfg);
         if (VF_SUCCESS != err) {
@@ -435,9 +479,9 @@ vf_err_t vf_core_run_all(void)
 
 vf_err_t vf_core_run_by_flag(const char *flag)
 {
-        vf_err_t        err = VF_SUCCESS;
+        vf_err_t err = VF_SUCCESS;
         vf_frames_cfg_t *cfg = NULL;
-        size_t           i   = 0U;
+        size_t i = 0U;
 
         if (NULL == flag) {
                 log_err("Invalid input: flag = NULL");
@@ -455,6 +499,13 @@ vf_err_t vf_core_run_by_flag(const char *flag)
                         }
 
                         err = run_scenario(&g_scenarios[i], cfg);
+                        if (VF_SUCCESS != err) {
+                                log_err("Scenario execution failed "
+                                        "[name='%s' flag='%s' error='%s']",
+                                        g_scenarios[i].name,
+                                        g_scenarios[i].flag,
+                                        vf_err2str(err));
+                        }
 
                         vf_parser_free_frames_cfg(cfg);
 

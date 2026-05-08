@@ -27,6 +27,12 @@
 static
 vf_pixel_format_t vf_parser_str_to_format(const char *str)
 {
+        if (NULL == str) {
+                log_err("Invalid input: str = %s", str);
+
+                return VF_PIXEL_FORMAT_INVALID;
+        }
+
         if (0 == strcmp(str, "RAW8")) {
                 return VF_PIXEL_FORMAT_RAW8;
         }
@@ -82,6 +88,9 @@ int vf_parser_extract_string(char *src, char *out, size_t max_len)
         size_t len = 0U;
 
         if (NULL == src || NULL == out || 0U == max_len) {
+                log_err("Invalid input: src = %p, out = %p, max_len = %d",
+                        (void *)src, (void *)out, max_len);
+
                 return -1;
         }
 
@@ -121,29 +130,40 @@ int vf_parser_extract_string(char *src, char *out, size_t max_len)
 static
 int vf_parser_extract_int(char *src, int *value)
 {
-    char *colon = NULL;
+        char *colon = NULL;
 
-    if (NULL == src || NULL == value) {
-        return -1;
-    }
+        if (NULL == src || NULL == value) {
+                log_err("Invalid input: src = %p, value = %d", (void *)src, value);
 
-    colon = strchr(src, ':');
-    if (NULL == colon) {
-        return -1;
-    }
+                return -1;
+        }
 
-    *value = atoi(colon + 1);
+        colon = strchr(src, ':');
+        if (NULL == colon) {
+                return -1;
+        }
 
-    return 0;
+        *value = atoi(colon + 1);
+
+        return 0;
 }
 
 vf_err_t vf_parser_load_frames_cfg(const char *cfg_path, vf_frames_cfg_t **out_cfg)
 {
+        vf_frames_cfg_t *cfg = NULL;
+        vf_frame_set_t *set = NULL;
+        vf_frame_info_t *frame = NULL;
         char *file_data = NULL;
         char *cursor = NULL;
-        vf_frames_cfg_t *cfg = NULL;
+        char *frames_start = NULL;
+        char *frames_end = NULL;
+        char *tmp = NULL;
         int set_count = 0;
+        int frame_count = 0;
+        int width = 0;
+        int height = 0;
         int i = 0;
+        int j = 0;
 
         if (NULL == cfg_path || NULL == out_cfg) {
                 log_err("Invalid parameters: cfg_path = %p, out_cfg = %p",
@@ -156,11 +176,15 @@ vf_err_t vf_parser_load_frames_cfg(const char *cfg_path, vf_frames_cfg_t **out_c
 
         file_data = vf_parser_read_file(cfg_path);
         if (NULL == file_data) {
+                log_err("Invalid data file: file_data = %p", (void *)file_data);
+
                 return VF_FILE_ERR;
         }
 
         cfg = calloc(1U, sizeof(*cfg));
         if (NULL == cfg) {
+                log_err("Invalid cfg: cfg = %p", (void *)cfg);
+
                 free(file_data);
 
                 return VF_OOM;
@@ -184,6 +208,8 @@ vf_err_t vf_parser_load_frames_cfg(const char *cfg_path, vf_frames_cfg_t **out_c
 
         cfg->frame_sets = calloc((size_t)set_count, sizeof(vf_frame_set_t));
         if (NULL == cfg->frame_sets) {
+                log_err("Invalid frame sets cfg: cfg_frame_sets = %p", (void *)cfg->frame_sets);
+
                 free(file_data);
                 free(cfg);
 
@@ -194,13 +220,13 @@ vf_err_t vf_parser_load_frames_cfg(const char *cfg_path, vf_frames_cfg_t **out_c
         cursor = file_data;
 
         for (i = 0; i < set_count; i++) {
-                vf_frame_set_t *set = &cfg->frame_sets[i];
+                set = &cfg->frame_sets[i];
                 char fmt_str[32] = {0};
-                char *frames_start = NULL;
-                char *frames_end = NULL;
-                char *tmp = NULL;
-                int frame_count = 0;
-                int j = 0;
+                frames_start = NULL;
+                frames_end = NULL;
+                tmp = NULL;
+                frame_count = 0;
+                j = 0;
 
                 cursor = strstr(cursor, "\"name\"");
                 if (NULL == cursor || 0 != vf_parser_extract_string(cursor, set->name, sizeof(set->name))) {
@@ -289,9 +315,9 @@ vf_err_t vf_parser_load_frames_cfg(const char *cfg_path, vf_frames_cfg_t **out_c
                 set->frame_count = (uint32_t)frame_count;
 
                 for (j = 0; j < frame_count; j++) {
-                        vf_frame_info_t *frame = &set->frames[j];
-                        int width = 0;
-                        int height = 0;
+                        frame = &set->frames[j];
+                        width = 0;
+                        height = 0;
 
                         cursor = strstr(cursor, "\"file\"");
                         if (NULL == cursor ||
@@ -328,10 +354,10 @@ vf_err_t vf_parser_load_frames_cfg(const char *cfg_path, vf_frames_cfg_t **out_c
                         frame->height = (uint32_t)height;
 
                         (void)snprintf(frame->full_path,
-                                    sizeof(frame->full_path),
-                                    "%s/%s",
-                                    set->base_path,
-                                    frame->file_name);
+                                       sizeof(frame->full_path),
+                                       "%s/%s",
+                                       set->base_path,
+                                       frame->file_name);
                 }
 
                 log_info("Parsed frame set '%s' with %u frames", set->name, set->frame_count);
@@ -348,16 +374,19 @@ vf_err_t vf_parser_load_frames_cfg(const char *cfg_path, vf_frames_cfg_t **out_c
 
 void vf_parser_free_frames_cfg(vf_frames_cfg_t *cfg)
 {
-    uint32_t i = 0U;
+        uint32_t i = 0U;
 
-    if (NULL == cfg) {
-            return;
-    }
+        if (NULL == cfg) {
+                log_err("Invalid parameters: cfg = %p", (void *)cfg);
 
-    for (i = 0U; i < cfg->frame_set_count; i++) {
-            free(cfg->frame_sets[i].frames);
-    }
+                return;
+        }
+
+        for (i = 0U; i < cfg->frame_set_count; i++) {
+                free(cfg->frame_sets[i].frames);
+        }
 
         free(cfg->frame_sets);
         free(cfg);
 }
+

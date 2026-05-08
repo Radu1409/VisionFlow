@@ -32,6 +32,14 @@
 #define VF_FB_MAX_PLANE_COUNT   4U
 #define VF_FB_STRIDE_ALIGN      16U
 
+#define VF_PIXEL_FMT_RGB888_STR   "RGB888"
+#define VF_PIXEL_FMT_BGR888_STR   "BGR888"
+#define VF_PIXEL_FMT_RGBA8888_STR "RGBA8888"
+#define VF_PIXEL_FMT_YUV420P_STR  "YUV420P"
+#define VF_PIXEL_FMT_NV12_STR     "NV12"
+#define VF_PIXEL_FMT_RAW8_STR     "RAW8"
+#define VF_PIXEL_FMT_UNKNOWN_STR  "UNKNOWN"
+
 typedef enum {
         VF_PIXEL_FMT_UNKNOWN  = 0,
         VF_PIXEL_FMT_RGB888   = 1,
@@ -61,14 +69,14 @@ typedef struct {
         uint32_t       frame_id;
         uint32_t       sequence_index;
         uint64_t       timestamp_ms;
-        const char     *source_name;
+        const char    *source_name;
         uint32_t       width;
         uint32_t       height;
         vf_pixel_fmt_t format;
 } vf_frame_meta_t;
 
 typedef struct {
-        uint8_t         *data;
+        uint8_t        *data;
         size_t          total_size;
         uint8_t         owns_memory;
 
