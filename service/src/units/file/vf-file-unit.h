@@ -24,10 +24,6 @@
 #include "vf-parser.h"
 #include "vf-unit-operations.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 typedef enum {
         VF_FILE_UNIT_MODE_IN  = 0,
         VF_FILE_UNIT_MODE_OUT = 1
@@ -51,10 +47,6 @@ vf_err_t vf_file_unit_process_data(void *ctx, ...);
 vf_err_t vf_file_unit_send_data(void *ctx, ...);
 
 vf_err_t vf_file_unit_init_operations(vf_unit_operations_t *ops);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* VF_FILE_UNIT_H */
 

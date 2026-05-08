@@ -25,7 +25,7 @@
 #define NUM_CAMERAS_ON     2
 #define PORT_NUM_ONE       1
 #define PORT_NUM_TWO       2
-#define FRAME_ID           13
+#define DEFAULT_FRAME_ID   13
 #define DEFAULT_TIMESTAMP  1634500123
 
 int main()
@@ -51,8 +51,8 @@ int main()
 
         log_err("The video sensor on port %d is not responding!", PORT_NUM_ONE);
 
-        log_trace("Entering process_video_frame(). frame_id=%u, timestamp=%llu ms", FRAME_ID,
-                  DEFAULT_TIMESTAMP);
+        log_trace("Entering process_video_frame(). DEFAULT_FRAME_ID=%u, timestamp=%llu ms",
+                  DEFAULT_FRAME_ID, DEFAULT_TIMESTAMP);
 
         log_wrn("Memory leaks occurs...");
 

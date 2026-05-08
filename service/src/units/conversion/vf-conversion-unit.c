@@ -45,10 +45,10 @@ typedef struct {
 
 vf_err_t vf_conversion_unit_init(void *ctx, ...)
 {
-        vf_unit_t                 *unit = NULL;
+        vf_unit_t *unit = NULL;
         vf_conversion_unit_data_t *data = NULL;
-        vf_conversion_unit_cfg_t  *cfg  = NULL;
-        vf_err_t                   err  = VF_SUCCESS;
+        vf_conversion_unit_cfg_t *cfg = NULL;
+        vf_err_t err = VF_SUCCESS;
 
         if (NULL == ctx) {
                 log_err("Invalid input: ctx = %p", ctx);
@@ -57,7 +57,7 @@ vf_err_t vf_conversion_unit_init(void *ctx, ...)
         }
 
         unit = (vf_unit_t *)ctx;
-        cfg  = (vf_conversion_unit_cfg_t *)unit->internal_data;
+        cfg = (vf_conversion_unit_cfg_t *)unit->internal_data;
 
         if (NULL == cfg) {
                 log_err("Invalid input: cfg = %p", (void *)cfg);
@@ -87,8 +87,8 @@ vf_err_t vf_conversion_unit_init(void *ctx, ...)
                 return err;
         }
 
-        data->pool       = cfg->pool;
-        data->src_pool   = cfg->src_pool;
+        data->pool = cfg->pool;
+        data->src_pool = cfg->src_pool;
         data->dst_params = cfg->dst_params;
 
         unit->internal_data = data;
@@ -103,8 +103,9 @@ vf_err_t vf_conversion_unit_init(void *ctx, ...)
 
 vf_err_t vf_conversion_unit_deinit(void *ctx, ...)
 {
-        vf_unit_t                 *unit = NULL;
+        vf_unit_t *unit = NULL;
         vf_conversion_unit_data_t *data = NULL;
+        vf_err_t buff_release_err = VF_SUCCESS;
 
         if (NULL == ctx) {
                 log_err("Invalid input: ctx = %p", ctx);
@@ -122,13 +123,21 @@ vf_err_t vf_conversion_unit_deinit(void *ctx, ...)
         vf_conversion_deinit(&data->conv_ctx);
 
         if ((NULL != data->in_fb) && (NULL != data->src_pool)) {
-                (void)vf_buf_pool_release(data->src_pool, data->in_fb);
+                buff_release_err = vf_buf_pool_release(data->src_pool, data->in_fb);
+                if (VF_SUCCESS != buff_release_err) {
+                        log_err("Failed to release framebuffer back to pool: %s",
+                                vf_err2str(buff_release_err));
+                }
 
                 data->in_fb = NULL;
         }
 
         if ((NULL != data->out_fb) && (NULL != data->pool)) {
-                (void)vf_buf_pool_release(data->pool, data->out_fb);
+                vf_buf_pool_release(data->pool, data->out_fb);
+                if (VF_SUCCESS != buff_release_err) {
+                        log_err("Failed to release framebuffer back to pool: %s",
+                                vf_err2str(buff_release_err));
+                }
 
                 data->out_fb = NULL;
         }
@@ -144,9 +153,9 @@ vf_err_t vf_conversion_unit_deinit(void *ctx, ...)
 
 vf_err_t vf_conversion_unit_get_data(void *ctx, ...)
 {
-        vf_unit_t                 *unit = NULL;
+        vf_unit_t *unit = NULL;
         vf_conversion_unit_data_t *data = NULL;
-        vf_err_t                   err  = VF_SUCCESS;
+        vf_err_t err = VF_SUCCESS;
 
         if (NULL == ctx) {
                 log_err("Invalid input: ctx = %p", ctx);
@@ -185,9 +194,10 @@ vf_err_t vf_conversion_unit_get_data(void *ctx, ...)
 
 vf_err_t vf_conversion_unit_process_data(void *ctx, ...)
 {
-        vf_unit_t                 *unit = NULL;
+        vf_unit_t *unit = NULL;
         vf_conversion_unit_data_t *data = NULL;
-        vf_err_t                   err  = VF_SUCCESS;
+        vf_err_t err = VF_SUCCESS;
+        vf_err_t buff_release_err = VF_SUCCESS;
 
         if (NULL == ctx) {
                 log_err("Invalid input: ctx = %p", ctx);
@@ -222,7 +232,11 @@ vf_err_t vf_conversion_unit_process_data(void *ctx, ...)
         if (VF_SUCCESS != err) {
                 log_err("Conversion failed: %s", vf_err2str(err));
 
-                (void)vf_buf_pool_release(data->pool, data->out_fb);
+                buff_release_err = vf_buf_pool_release(data->pool, data->out_fb);
+                if (VF_SUCCESS != buff_release_err) {
+                        log_err("Failed to release framebuffer back to pool: %s",
+                                vf_err2str(buff_release_err));
+                }
 
                 data->out_fb = NULL;
 
@@ -236,9 +250,10 @@ vf_err_t vf_conversion_unit_process_data(void *ctx, ...)
 
 vf_err_t vf_conversion_unit_send_data(void *ctx, ...)
 {
-        vf_unit_t                 *unit = NULL;
+        vf_unit_t *unit = NULL;
         vf_conversion_unit_data_t *data = NULL;
-        vf_err_t                   err  = VF_SUCCESS;
+        vf_err_t err = VF_SUCCESS;
+        vf_err_t buff_release_err = VF_SUCCESS;
 
         if (NULL == ctx) {
                 log_err("Invalid input: ctx = %p", ctx);
@@ -265,7 +280,11 @@ vf_err_t vf_conversion_unit_send_data(void *ctx, ...)
                 log_err("Conversion unit '%s' has no out_queue",
                         unit->name ? unit->name : "unknown");
 
-                (void)vf_buf_pool_release(data->pool, data->out_fb);
+                buff_release_err = vf_buf_pool_release(data->pool, data->out_fb);
+                if (VF_SUCCESS != buff_release_err) {
+                        log_err("Failed to release framebuffer back to pool: %s",
+                                vf_err2str(buff_release_err));
+                }
 
                 data->out_fb = NULL;
 
@@ -276,7 +295,11 @@ vf_err_t vf_conversion_unit_send_data(void *ctx, ...)
         if (VF_SUCCESS != err) {
                 log_err("Failed to push converted frame to out_queue: %s", vf_err2str(err));
 
-                (void)vf_buf_pool_release(data->pool, data->out_fb);
+                buff_release_err = vf_buf_pool_release(data->pool, data->out_fb);
+                if (VF_SUCCESS != buff_release_err) {
+                        log_err("Failed to release framebuffer back to pool: %s",
+                                vf_err2str(buff_release_err));
+                }
 
                 data->out_fb = NULL;
 
@@ -284,7 +307,11 @@ vf_err_t vf_conversion_unit_send_data(void *ctx, ...)
         }
 
         if (NULL != data->in_fb) {
-                (void)vf_buf_pool_release(data->src_pool, data->in_fb);
+                buff_release_err = vf_buf_pool_release(data->src_pool, data->in_fb);
+                if (VF_SUCCESS != buff_release_err) {
+                        log_err("Failed to release framebuffer back to pool: %s",
+                                vf_err2str(buff_release_err));
+                }
 
                 data->in_fb = NULL;
         }
@@ -305,11 +332,11 @@ vf_err_t vf_conversion_unit_init_operations(vf_unit_operations_t *ops)
                 return VF_INVALID_PARAMETER;
         }
 
-        ops->init         = vf_conversion_unit_init;
-        ops->deinit       = vf_conversion_unit_deinit;
-        ops->get_data     = vf_conversion_unit_get_data;
+        ops->init = vf_conversion_unit_init;
+        ops->deinit = vf_conversion_unit_deinit;
+        ops->get_data = vf_conversion_unit_get_data;
         ops->process_data = vf_conversion_unit_process_data;
-        ops->send_data    = vf_conversion_unit_send_data;
+        ops->send_data = vf_conversion_unit_send_data;
 
         log_info("Conversion unit operations initialized");
 

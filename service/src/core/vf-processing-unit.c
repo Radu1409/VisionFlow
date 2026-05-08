@@ -24,14 +24,17 @@
 
 #define MODULE_NAME "vf_processing_unit"
 
+#define NS_PER_MS   1000000ULL
+#define MS_PER_SEC  1000ULL
+
 static
 uint64_t get_time_ms(void)
 {
-        struct timespec ts = { 0 };
+        struct timespec ts = {0};
 
         (void)clock_gettime(CLOCK_MONOTONIC, &ts);
 
-        return (uint64_t)(ts.tv_sec * 1000ULL + ts.tv_nsec / 1000000ULL);
+        return (uint64_t)(ts.tv_sec * MS_PER_SEC + ts.tv_nsec / NS_PER_MS);
 }
 
 vf_err_t vf_unit_create(vf_unit_t *unit)
@@ -86,12 +89,14 @@ vf_err_t vf_unit_create(vf_unit_t *unit)
 void vf_unit_destroy(vf_unit_t *unit)
 {
         if (NULL == unit) {
-                log_wrn("vf_unit_destroy called with NULL unit");
+                log_err("vf_unit_destroy called with NULL unit");
 
                 return;
         }
 
         if (0 == unit->initialized) {
+                log_err("Unit not initialized");
+
                 return;
         }
 
@@ -114,9 +119,9 @@ void vf_unit_destroy(vf_unit_t *unit)
                 unit->operations.deinit(unit);
         }
 
-        unit->initialized   = 0;
-        unit->in_queue      = NULL;
-        unit->out_queue     = NULL;
+        unit->initialized = 0;
+        unit->in_queue = NULL;
+        unit->out_queue = NULL;
         unit->internal_data = NULL;
 
         (void)vf_notifier_deinit(&unit->notifier);
@@ -126,11 +131,11 @@ void vf_unit_destroy(vf_unit_t *unit)
 
 vf_err_t vf_unit_run(vf_unit_t *unit)
 {
-        vf_err_t err    = VF_SUCCESS;
-        uint64_t t0     = 0U;
+        uint64_t t0 = 0U;
         uint64_t get_ms = 0U;
         uint64_t prc_ms = 0U;
         uint64_t snd_ms = 0U;
+        vf_err_t err = VF_SUCCESS;
 
         if (NULL == unit) {
                 log_err("Invalid input: unit = %p", (void *)unit);
@@ -145,8 +150,8 @@ vf_err_t vf_unit_run(vf_unit_t *unit)
         }
 
         if (NULL != unit->operations.get_data) {
-                t0     = get_time_ms();
-                err    = unit->operations.get_data(unit);
+                t0 = get_time_ms();
+                err = unit->operations.get_data(unit);
                 get_ms = get_time_ms() - t0;
 
                 if (VF_SUCCESS != err) {
@@ -159,8 +164,8 @@ vf_err_t vf_unit_run(vf_unit_t *unit)
         }
 
         if (NULL != unit->operations.process_data) {
-                t0     = get_time_ms();
-                err    = unit->operations.process_data(unit);
+                t0 = get_time_ms();
+                err = unit->operations.process_data(unit);
                 prc_ms = get_time_ms() - t0;
 
                 if (VF_SUCCESS != err) {
@@ -173,8 +178,8 @@ vf_err_t vf_unit_run(vf_unit_t *unit)
         }
 
         if (NULL != unit->operations.send_data) {
-                t0     = get_time_ms();
-                err    = unit->operations.send_data(unit);
+                t0 = get_time_ms();
+                err = unit->operations.send_data(unit);
                 snd_ms = get_time_ms() - t0;
 
                 if (VF_SUCCESS != err) {
@@ -186,10 +191,10 @@ vf_err_t vf_unit_run(vf_unit_t *unit)
                 }
         }
 
-        unit->stats.total_get_data_ms     += get_ms;
+        unit->stats.total_get_data_ms += get_ms;
         unit->stats.total_process_data_ms += prc_ms;
-        unit->stats.total_send_data_ms    += snd_ms;
-        unit->stats.total_ms              += get_ms + prc_ms + snd_ms;
+        unit->stats.total_send_data_ms += snd_ms;
+        unit->stats.total_ms += get_ms + prc_ms + snd_ms;
         unit->stats.frames_processed++;
 
         log_dbg("Unit '%s'"
@@ -240,21 +245,21 @@ const char *vf_unit_type_str(vf_unit_type_t type)
 {
         switch (type) {
                 case VF_UNIT_TYPE_FILE_IN:
-                        return "FILE_IN";
+                        return VF_UNIT_TYPE_FILE_IN_STR;
                 case VF_UNIT_TYPE_FILE_OUT:
-                        return "FILE_OUT";
+                        return VF_UNIT_TYPE_FILE_OUT_STR;
                 case VF_UNIT_TYPE_CONVERSION:
-                        return "CONVERSION";
+                        return VF_UNIT_TYPE_CONVERSION_STR;
                 case VF_UNIT_TYPE_CAMERA:
-                        return "CAMERA";
+                        return VF_UNIT_TYPE_CAMERA_STR;
                 case VF_UNIT_TYPE_ENCODER:
-                        return "ENCODER";
+                        return VF_UNIT_TYPE_ENCODER_STR;
                 case VF_UNIT_TYPE_DISPLAY:
-                        return "DISPLAY";
+                        return VF_UNIT_TYPE_DISPLAY_STR;
                 case VF_UNIT_TYPE_UNKNOWN:
                 case VF_UNIT_TYPE_MAX:
                 default:
-                        return "UNKNOWN";
+                        return VF_UNIT_TYPE_UNKNOWN_STR;
         }
 }
 

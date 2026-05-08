@@ -24,10 +24,12 @@
 
 #include "vf-error.h"
 
+#define VF_FILE_PATH_MAX_LEN  256U
+
 typedef struct {
-        FILE   *fp;
-        char    path[256];
-        int     is_open;
+        FILE *fp;
+        char  path[VF_FILE_PATH_MAX_LEN];
+        int   is_open;
 } vf_file_t;
 
 vf_err_t vf_file_open(vf_file_t *file, const char *path, const char *mode);

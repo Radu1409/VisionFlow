@@ -24,10 +24,6 @@
 #include "vf-error.h"
 #include "vf-framebuffer.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 typedef struct vf_conversion_ctx_t vf_conversion_ctx_t;
 
 typedef vf_err_t (*vf_convert_fn_t)(const vf_framebuffer_t *src, vf_framebuffer_t *dst);
@@ -39,21 +35,12 @@ struct vf_conversion_ctx_t {
         int initialized;
 };
 
-vf_err_t vf_conversion_init(vf_conversion_ctx_t *ctx,
-                             vf_pixel_fmt_t       src_fmt,
-                             vf_pixel_fmt_t       dst_fmt);
-
-vf_err_t vf_conversion_process(vf_conversion_ctx_t  *ctx,
-                                const vf_framebuffer_t *src,
-                                vf_framebuffer_t       *dst);
-
+vf_err_t vf_conversion_init(vf_conversion_ctx_t *ctx, vf_pixel_fmt_t src_fmt,
+                            vf_pixel_fmt_t dst_fmt);
+vf_err_t vf_conversion_process(vf_conversion_ctx_t *ctx, const vf_framebuffer_t *src,
+                               vf_framebuffer_t *dst);
 void vf_conversion_deinit(vf_conversion_ctx_t *ctx);
-
 int vf_conversion_is_supported(vf_pixel_fmt_t src_fmt, vf_pixel_fmt_t dst_fmt);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* VF_CONVERSION_H */
 

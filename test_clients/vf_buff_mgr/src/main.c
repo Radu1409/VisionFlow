@@ -23,31 +23,33 @@
 #include "vf-framebuffer.h"
 #include "vf-logger.h"
 
-#define POOL_SLOTS   4U
-#define QUEUE_CAP    4U
-#define FRAME_W      320U
-#define FRAME_H      240U
+#define DEFAULT_POOL_SLOTS   4U
+#define DEFAULT_QUEUE_CAP    4U
+#define DEFAULT_FRAME_W      320U
+#define DEFAULT_FRAME_H      240U
 
 static
 int test_pool_acquire_release(void)
 {
-        vf_buf_pool_t   pool      = { 0 };
-        vf_fb_params_t  params    = { FRAME_W, FRAME_H, VF_PIXEL_FMT_RGB888 };
-        vf_framebuffer_t *fb0     = NULL;
-        vf_framebuffer_t *fb1     = NULL;
-        vf_err_t          err     = VF_SUCCESS;
+        vf_buf_pool_t pool = {0};
+        vf_fb_params_t params = {DEFAULT_FRAME_W, DEFAULT_FRAME_H, VF_PIXEL_FMT_RGB888};
+        vf_framebuffer_t *fb0 = NULL;
+        vf_framebuffer_t *fb1 = NULL;
+        uint32_t buff_pool_available = 0;
+        vf_err_t err = VF_SUCCESS;
 
         log_info("--- test_pool_acquire_release ---");
 
-        err = vf_buf_pool_init(&pool, &params, POOL_SLOTS);
+        err = vf_buf_pool_init(&pool, &params, DEFAULT_POOL_SLOTS);
         if (VF_SUCCESS != err) {
                 log_err("pool init failed");
 
                 return 1;
         }
 
-        if (POOL_SLOTS != vf_buf_pool_available(&pool)) {
-                log_err("Expected %u available, got %u", POOL_SLOTS, vf_buf_pool_available(&pool));
+        if (DEFAULT_POOL_SLOTS != vf_buf_pool_available(&pool)) {
+                log_err("Expected %u available, got %u", DEFAULT_POOL_SLOTS,
+                        vf_buf_pool_available(&pool));
 
                 vf_buf_pool_deinit(&pool);
 
@@ -72,8 +74,9 @@ int test_pool_acquire_release(void)
                 return 1;
         }
 
-        if ((POOL_SLOTS - 2U) != vf_buf_pool_available(&pool)) {
-                log_err("Expected %u available after 2 acquires", POOL_SLOTS - 2U);
+        buff_pool_available = vf_buf_pool_available(&pool);
+        if ((DEFAULT_POOL_SLOTS - 2U) != buff_pool_available) {
+                log_err("Expected %u available after 2 acquires", DEFAULT_POOL_SLOTS - 2U);
 
                 vf_buf_pool_deinit(&pool);
 
@@ -98,7 +101,8 @@ int test_pool_acquire_release(void)
                 return 1;
         }
 
-        if (POOL_SLOTS != vf_buf_pool_available(&pool)) {
+        buff_pool_available = vf_buf_pool_available(&pool);
+        if (DEFAULT_POOL_SLOTS != buff_pool_available) {
                 log_err("Expected all slots available after release");
 
                 vf_buf_pool_deinit(&pool);
@@ -116,22 +120,22 @@ int test_pool_acquire_release(void)
 static
 int test_pool_exhaustion(void)
 {
-        vf_buf_pool_t    pool    = { 0 };
-        vf_fb_params_t   params  = { FRAME_W, FRAME_H, VF_PIXEL_FMT_RGB888 };
-        vf_framebuffer_t *fb     = NULL;
-        vf_err_t          err    = VF_SUCCESS;
-        uint32_t          i      = 0U;
+        vf_buf_pool_t pool = {0};
+        vf_fb_params_t params = {DEFAULT_FRAME_W, DEFAULT_FRAME_H, VF_PIXEL_FMT_RGB888};
+        vf_framebuffer_t *fb = NULL;
+        uint32_t i = 0U;
+        vf_err_t err = VF_SUCCESS;
 
         log_info("--- test_pool_exhaustion ---");
 
-        err = vf_buf_pool_init(&pool, &params, POOL_SLOTS);
+        err = vf_buf_pool_init(&pool, &params, DEFAULT_POOL_SLOTS);
         if (VF_SUCCESS != err) {
                 log_err("pool init failed");
 
                 return 1;
         }
 
-        for (i = 0U; i < POOL_SLOTS; i++) {
+        for (i = 0U; i < DEFAULT_POOL_SLOTS; i++) {
                 err = vf_buf_pool_acquire(&pool, &fb);
                 if (VF_SUCCESS != err) {
                         log_err("acquire failed at slot %u", i);
@@ -162,23 +166,23 @@ int test_pool_exhaustion(void)
 static
 int test_queue_push_pop(void)
 {
-        vf_buf_pool_t    pool     = { 0 };
-        vf_buf_queue_t   queue    = { 0 };
-        vf_fb_params_t   params   = { FRAME_W, FRAME_H, VF_PIXEL_FMT_RGB888 };
-        vf_framebuffer_t *fb_in   = NULL;
-        vf_framebuffer_t *fb_out  = NULL;
-        vf_err_t          err     = VF_SUCCESS;
+        vf_buf_pool_t pool = {0};
+        vf_buf_queue_t queue = {0};
+        vf_fb_params_t params = {DEFAULT_FRAME_W, DEFAULT_FRAME_H, VF_PIXEL_FMT_RGB888};
+        vf_framebuffer_t *fb_in = NULL;
+        vf_framebuffer_t *fb_out = NULL;
+        vf_err_t err = VF_SUCCESS;
 
         log_info("--- test_queue_push_pop ---");
 
-        err = vf_buf_pool_init(&pool, &params, POOL_SLOTS);
+        err = vf_buf_pool_init(&pool, &params, DEFAULT_POOL_SLOTS);
         if (VF_SUCCESS != err) {
                 log_err("pool init failed");
 
                 return 1;
         }
 
-        err = vf_buf_queue_init(&queue, QUEUE_CAP);
+        err = vf_buf_queue_init(&queue, DEFAULT_QUEUE_CAP);
         if (VF_SUCCESS != err) {
                 log_err("queue init failed");
 
@@ -235,7 +239,11 @@ int test_queue_push_pop(void)
                 return 1;
         }
 
-        (void)vf_buf_pool_release(&pool, fb_out);
+        err = vf_buf_pool_release(&pool, fb_out);
+        if (VF_SUCCESS != err) {
+                log_err("Failed to release output framebuffer after conversion failure: %s",
+                        vf_err2str(err));
+        }
 
         vf_buf_queue_deinit(&queue);
         vf_buf_pool_deinit(&pool);
@@ -247,8 +255,8 @@ int test_queue_push_pop(void)
 
 int main(void)
 {
-        vf_err_t err    = VF_SUCCESS;
-        int      failed = 0;
+        vf_err_t err = VF_SUCCESS;
+        int failed = 0;
 
         err = vf_logger_init("vf_buf_mgr_test", VF_LOG_LEVEL_DBG);
         if (VF_SUCCESS != err) {

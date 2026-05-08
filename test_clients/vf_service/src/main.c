@@ -31,6 +31,11 @@
 
 #define EOK 0
 
+#define VF_PIXEL_FORMAT_RAW8_STR    "RAW8"
+#define VF_PIXEL_FORMAT_RGB888_STR  "RGB888"
+#define VF_PIXEL_FORMAT_YUV420_STR  "YUV420"
+#define VF_PIXEL_FORMAT_INVALID_STR "INVALID"
+
 #define DEFAULT_CFG_PATH "../../../vf_frames/conf/vf_frames_cfg.json"
 
 #define err(fmt, ...)   fprintf(stderr, "Err: " fmt, ##__VA_ARGS__)
@@ -41,13 +46,13 @@ const char *vf_pixel_format_to_str(vf_pixel_format_t format)
 {
         switch (format) {
                 case VF_PIXEL_FORMAT_RAW8:
-                        return "RAW8";
+                        return VF_PIXEL_FORMAT_RAW8_STR;
                 case VF_PIXEL_FORMAT_RGB888:
-                        return "RGB888";
+                        return VF_PIXEL_FORMAT_RGB888_STR;
                 case VF_PIXEL_FORMAT_YUV420:
-                        return "YUV420";
+                        return VF_PIXEL_FORMAT_YUV420_STR;
                 default:
-                        return "INVALID";
+                        return VF_PIXEL_FORMAT_INVALID_STR;
         }
 }
 
@@ -100,26 +105,26 @@ void print_frames_cfg(const vf_frames_cfg_t *cfg)
 
 int main(int argc, char *argv[])
 {
-        const char *cfg_path = DEFAULT_CFG_PATH;
         vf_frames_cfg_t *cfg = NULL;
-        vf_err_t rc = VF_SUCCESS;
+        const char *cfg_path = DEFAULT_CFG_PATH;
         int err_code = EOK;
+        vf_err_t rc = VF_SUCCESS;
 
         if (argc > 2) {
-            print_usage(argv);
+                print_usage(argv);
 
-            return VF_INVALID_PARAMETER;
+                return VF_INVALID_PARAMETER;
         }
 
         if (2 == argc) {
-            cfg_path = argv[1];
+                cfg_path = argv[1];
         }
 
         err_code = vf_logger_init("vf_service_test", VF_LOG_LEVEL_TRACE);
         if (EOK != err_code) {
-            err("Failed to initialize logger: err = %d\n", err_code);
+                err("Failed to initialize logger: err = %d\n", err_code);
 
-            return VF_INIT_FAILED;
+                return VF_INIT_FAILED;
         }
 
         log_info("VisionFlow Service Test Client started");

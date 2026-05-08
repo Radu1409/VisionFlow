@@ -26,9 +26,13 @@
 #include "vf-notifier.h"
 #include "vf-unit-operations.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#define VF_UNIT_TYPE_FILE_IN_STR       "VF_UNIT_TYPE_FILE_IN"
+#define VF_UNIT_TYPE_FILE_OUT_STR      "VF_UNIT_TYPE_FILE_OUT"
+#define VF_UNIT_TYPE_CONVERSION_STR    "VF_UNIT_TYPE_CONVERSION"
+#define VF_UNIT_TYPE_CAMERA_STR        "VF_UNIT_TYPE_CAMERA"
+#define VF_UNIT_TYPE_ENCODER_STR       "VF_UNIT_TYPE_ENCODER"
+#define VF_UNIT_TYPE_DISPLAY_STR       "VF_UNIT_TYPE_DISPLAY"
+#define VF_UNIT_TYPE_UNKNOWN_STR       "VF_UNIT_TYPE_UNKNOWN"
 
 typedef enum {
         VF_UNIT_TYPE_UNKNOWN    = 0,
@@ -68,18 +72,11 @@ typedef struct vf_unit {
 } vf_unit_t;
 
 vf_err_t vf_unit_create(vf_unit_t *unit);
-void     vf_unit_destroy(vf_unit_t *unit);
-
+void vf_unit_destroy(vf_unit_t *unit);
 vf_err_t vf_unit_run(vf_unit_t *unit);
-
 vf_err_t vf_unit_connect_input(vf_unit_t *unit, vf_buf_queue_t *queue);
 vf_err_t vf_unit_connect_output(vf_unit_t *unit, vf_buf_queue_t *queue);
-
 const char *vf_unit_type_str(vf_unit_type_t type);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* VF_PROCESSING_UNIT_H */
 

@@ -22,24 +22,25 @@
 #include "vf-file.h"
 #include "vf-logger.h"
 
-#define TEST_FILE_PATH "vf_file_test.bin"
-#define TEST_DATA      "VisionFlow vf_file test payload\n"
+#define DEFAULT_FILE_PATH  "vf_file_test.bin"
+#define DEFAULT_DATA       "VisionFlow vf_file test payload\n"
+#define DEFAULT_BUFFER_LEN 128
 
 static
 int test_write_read(void)
 {
-        vf_file_t   file     = { 0 };
-        vf_err_t  err      = VF_SUCCESS;
-        const char *data     = TEST_DATA;
-        size_t      data_sz  = 0U;
-        char        rbuf[128]= { 0 };
-        size_t      n        = 0U;
+        vf_file_t file = {0};
+        const char *data = DEFAULT_DATA;
+        size_t data_sz = 0U;
+        char rbuf[DEFAULT_BUFFER_LEN]= {0};
+        size_t n = 0U;
+        vf_err_t err = VF_SUCCESS;
 
         log_info("--- test_write_read ---");
 
         data_sz = strlen(data);
 
-        err = vf_file_open(&file, TEST_FILE_PATH, "wb");
+        err = vf_file_open(&file, DEFAULT_FILE_PATH, "wb");
         if (VF_SUCCESS != err) {
                 log_err("open write failed");
 
@@ -60,7 +61,7 @@ int test_write_read(void)
                 return 1;
         }
 
-        err = vf_file_open(&file, TEST_FILE_PATH, "rb");
+        err = vf_file_open(&file, DEFAULT_FILE_PATH, "rb");
         if (VF_SUCCESS != err) {
                 log_err("open read failed");
 
@@ -97,17 +98,18 @@ static
 int test_exists(void)
 {
         int exists = 0;
+        vf_err_t err = VF_SUCCESS;
 
         log_info("--- test_exists ---");
 
-        (void)vf_file_exists(TEST_FILE_PATH, &exists);
+        err = vf_file_exists(DEFAULT_FILE_PATH, &exists);
         if (0 == exists) {
-                log_err("File should exist: %s", TEST_FILE_PATH);
+                log_err("File should exist: %s", DEFAULT_FILE_PATH);
 
                 return 1;
         }
 
-        (void)vf_file_exists("nonexistent_file.bin", &exists);
+        err = vf_file_exists("nonexistent_file.bin", &exists);
         if (0 != exists) {
                 log_err("File should not exist");
 
@@ -122,13 +124,13 @@ int test_exists(void)
 static
 int test_size(void)
 {
-        vf_file_t  file = { 0 };
-        vf_err_t err  = VF_SUCCESS;
-        size_t     sz   = 0U;
+        vf_file_t file = {0};
+        size_t sz = 0U;
+        vf_err_t err = VF_SUCCESS;
 
         log_info("--- test_size ---");
 
-        err = vf_file_open(&file, TEST_FILE_PATH, "rb");
+        err = vf_file_open(&file, DEFAULT_FILE_PATH, "rb");
         if (VF_SUCCESS != err) {
                 log_err("open failed");
 
@@ -144,8 +146,8 @@ int test_size(void)
                 return 1;
         }
 
-        if (sz != strlen(TEST_DATA)) {
-                log_err("Expected size %zu, got %zu", strlen(TEST_DATA), sz);
+        if (sz != strlen(DEFAULT_DATA)) {
+                log_err("Expected size %zu, got %zu", strlen(DEFAULT_DATA), sz);
 
                 (void)vf_file_close(&file);
 
@@ -162,13 +164,13 @@ int test_size(void)
 static
 int test_seek_tell(void)
 {
-        vf_file_t  file = { 0 };
-        vf_err_t err  = VF_SUCCESS;
-        long       pos  = 0;
+        vf_file_t file = {0};
+        long pos = 0;
+        vf_err_t err = VF_SUCCESS;
 
         log_info("--- test_seek_tell ---");
 
-        err = vf_file_open(&file, TEST_FILE_PATH, "rb");
+        err = vf_file_open(&file, DEFAULT_FILE_PATH, "rb");
         if (VF_SUCCESS != err) {
                 log_err("open failed");
 
@@ -202,8 +204,8 @@ int test_seek_tell(void)
 
 int main(void)
 {
-        vf_err_t err    = VF_SUCCESS;
-        int        failed = 0;
+        int failed = 0;
+        vf_err_t err = VF_SUCCESS;
 
         err = vf_logger_init("vf_file_test", VF_LOG_LEVEL_DBG);
         if (VF_SUCCESS != err) {
