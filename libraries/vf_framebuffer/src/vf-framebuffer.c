@@ -157,6 +157,7 @@ vf_err_t init_planes(vf_framebuffer_t *fb, const vf_fb_params_t *params)
                 case VF_PIXEL_FMT_BGR888:
                 case VF_PIXEL_FMT_RGBA8888:
                 case VF_PIXEL_FMT_RAW8:
+                case VF_PIXEL_FMT_YUYV:
                         init_planes_packed(fb, params);
 
                         break;
@@ -591,6 +592,8 @@ vf_bpp_t vf_pixel_fmt_bpp(vf_pixel_fmt_t format)
         switch (format) {
                 case VF_PIXEL_FMT_RAW8:
                         return VF_BPP_8;
+                case VF_PIXEL_FMT_YUYV:
+                        return VF_BPP_16;
                 case VF_PIXEL_FMT_RGB888:
                 case VF_PIXEL_FMT_BGR888:
                         return VF_BPP_24;
@@ -633,6 +636,10 @@ const char *vf_pixel_fmt_str(vf_pixel_fmt_t format)
                         return VF_PIXEL_FMT_RGBA8888_STR;
                 case VF_PIXEL_FMT_YUV420P:
                         return VF_PIXEL_FMT_YUV420P_STR;
+                case VF_PIXEL_FMT_YUYV:
+                        return VF_PIXEL_FMT_YUYV_STR;
+                case VF_PIXEL_FMT_MJPEG:
+                        return VF_PIXEL_FMT_MJPEG_STR;
                 case VF_PIXEL_FMT_NV12:
                         return VF_PIXEL_FMT_NV12_STR;
                 case VF_PIXEL_FMT_RAW8:
