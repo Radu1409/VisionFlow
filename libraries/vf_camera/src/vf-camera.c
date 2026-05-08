@@ -180,13 +180,17 @@ vf_err_t vf_camera_init(vf_camera_t *camera, const vf_camera_cfg_t *cfg)
                 goto close_fd;
         }
 
-        if (req.count < cfg->buffer_count) {
-                log_err("Insufficient buffer memory: requested %u, got %u",
-                        cfg->buffer_count, req.count);
+        if (0U == req.count) {
+                log_err("Driver returned 0 buffers");
 
                 err = VF_OOM;
 
                 goto close_fd;
+        }
+
+        if (req.count < cfg->buffer_count) {
+                log_wrn("Requested %u buffers, driver allocated %u — continuing",
+                        cfg->buffer_count, req.count);
         }
 
         camera->buffer_count = req.count;
