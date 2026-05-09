@@ -28,9 +28,10 @@
 #include <stdio.h>
 
 #include "vf-error.h"
+#include "vf-pixel-fmt.h"
 
-#define VF_FB_MAX_PLANE_COUNT   4U
-#define VF_FB_STRIDE_ALIGN      16U
+#define VF_FB_MAX_PLANE_COUNT     4U
+#define VF_FB_STRIDE_ALIGN        16U
 
 #define VF_PIXEL_FMT_RGB888_STR   "RGB888"
 #define VF_PIXEL_FMT_BGR888_STR   "BGR888"
@@ -39,17 +40,6 @@
 #define VF_PIXEL_FMT_NV12_STR     "NV12"
 #define VF_PIXEL_FMT_RAW8_STR     "RAW8"
 #define VF_PIXEL_FMT_UNKNOWN_STR  "UNKNOWN"
-
-typedef enum {
-        VF_PIXEL_FMT_UNKNOWN  = 0,
-        VF_PIXEL_FMT_RGB888   = 1,
-        VF_PIXEL_FMT_BGR888   = 2,
-        VF_PIXEL_FMT_RGBA8888 = 3,
-        VF_PIXEL_FMT_YUV420P  = 4,
-        VF_PIXEL_FMT_NV12     = 5,
-        VF_PIXEL_FMT_RAW8     = 6,
-        VF_PIXEL_FMT_LAST
-} vf_pixel_fmt_t;
 
 typedef enum {
         VF_BPP_INVALID = 0,
