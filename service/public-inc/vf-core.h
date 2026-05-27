@@ -21,6 +21,7 @@
 
 vf_err_t vf_core_run_all(void);
 vf_err_t vf_core_run_by_flag(const char *flag);
+vf_err_t vf_core_run_camera(void);
 
 #endif /* VF_CORE_H */
 

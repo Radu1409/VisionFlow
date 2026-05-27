@@ -32,6 +32,7 @@
 #define OPT_RAW_TO_RGB_SPLIT  7
 #define OPT_RAW_TO_YUV_CONCAT 8
 #define OPT_RAW_TO_YUV_SPLIT  9
+#define OPT_CAMERA            10
 
 /* *DISABLE FORMATTER* - DO NOT REMOVE. Formatter rule exception! */
 static struct option g_long_options[] = {
@@ -44,6 +45,7 @@ static struct option g_long_options[] = {
         { "raw_to_rgb_split", no_argument, 0, OPT_RAW_TO_RGB_SPLIT },
         { "raw_to_yuv_concat",no_argument, 0, OPT_RAW_TO_YUV_CONCAT},
         { "raw_to_yuv_split", no_argument, 0, OPT_RAW_TO_YUV_SPLIT },
+        { "camera",           no_argument, 0, OPT_CAMERA           },
         { 0,                  0,           0, 0                    }
 };
 /* *ENABLE FORMATTER* - DO NOT REMOVE. Formatter rule exception! */
@@ -62,6 +64,7 @@ void print_usage(const char *app_name)
         (void)fprintf(stderr, "  --raw_to_rgb_split  Run RAW8 -> RGB888 (split output)\n");
         (void)fprintf(stderr, "  --raw_to_yuv_concat Run RAW8 -> YUV420P (concatenated output)\n");
         (void)fprintf(stderr, "  --raw_to_yuv_split  Run RAW8 -> YUV420P (split output)\n");
+        (void)fprintf(stderr, "  --camera            Run camera capture pipeline\n");
 }
 
 int main(int argc, char *argv[])
@@ -134,6 +137,11 @@ int main(int argc, char *argv[])
                         break;
                 case OPT_RAW_TO_YUV_SPLIT:
                         flag = "--raw_to_yuv_split";
+                        found = 1;
+
+                        break;
+                case OPT_CAMERA:
+                        err = vf_core_run_camera();
                         found = 1;
 
                         break;
