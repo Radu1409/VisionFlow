@@ -44,6 +44,9 @@ run-raw_to_yuv_concat:
 run-raw_to_yuv_split:
 	$(MAKE) -C $(SERVICE_BUILD) run-raw_to_yuv_split
 
+clean-camera-scenario:
+	$(MAKE) -C $(SERVICE_BUILD) clean-camera-scenario
+
 clean-rgb_to_yuv_concat:
 	$(MAKE) -C $(SERVICE_BUILD) clean-rgb_to_yuv_concat
 
