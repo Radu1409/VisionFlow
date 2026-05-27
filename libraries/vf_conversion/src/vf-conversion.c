@@ -502,6 +502,74 @@ vf_err_t convert_nv12_to_rgb888(const vf_framebuffer_t *src, vf_framebuffer_t *d
 }
 
 /* =========================================================================
+ * YUYV -> RGB888
+ * ========================================================================= */
+
+static
+vf_err_t convert_yuyv_to_rgb888(const vf_framebuffer_t *src, vf_framebuffer_t *dst)
+{
+        const uint8_t *src_row = NULL;
+        uint8_t *dst_row = NULL;
+        uint32_t width = 0U;
+        uint32_t height = 0U;
+        int y0 = 0;
+        int y1 = 0;
+        int u = 0;
+        int v = 0;
+        int c = 0;
+        int d = 0;
+        int e = 0;
+
+        if (0 != validate_framebuffers(src, dst)) {
+                log_err("Invalid framebuffers for YUYV -> RGB888 conversion");
+
+                return VF_CONV_PROCESSING_ERR;
+        }
+
+        width = src->params.width;
+        height = src->params.height;
+
+        /*
+         * YUYV packed layout per 4 bytes = 2 pixels:
+         *   byte 0: Y0
+         *   byte 1: U  (shared by pixel 0 and 1)
+         *   byte 2: Y1
+         *   byte 3: V  (shared by pixel 0 and 1)
+         */
+        for (uint32_t y = 0U; y < height; y++) {
+                src_row = src->data + y * src->plane_stride[0];
+                dst_row = dst->data + y * dst->plane_stride[0];
+
+                for (uint32_t x = 0U; x < width; x += 2U) {
+                        y0 = (int)src_row[x * 2U + 0U];
+                        u  = (int)src_row[x * 2U + 1U];
+                        y1 = (int)src_row[x * 2U + 2U];
+                        v  = (int)src_row[x * 2U + 3U];
+
+                        /* Pixel 0 */
+                        c = y0 - 16;
+                        d = u  - 128;
+                        e = v  - 128;
+
+                        dst_row[x * 3U + 0U] = yuv_to_r(c, e);
+                        dst_row[x * 3U + 1U] = yuv_to_g(c, d, e);
+                        dst_row[x * 3U + 2U] = yuv_to_b(c, d);
+
+                        /* Pixel 1 */
+                        c = y1 - 16;
+
+                        dst_row[(x + 1U) * 3U + 0U] = yuv_to_r(c, e);
+                        dst_row[(x + 1U) * 3U + 1U] = yuv_to_g(c, d, e);
+                        dst_row[(x + 1U) * 3U + 2U] = yuv_to_b(c, d);
+                }
+        }
+
+        log_dbg("YUYV -> RGB888: %ux%u", width, height);
+
+        return VF_SUCCESS;
+}
+
+/* =========================================================================
  * Conversion table lookup
  * ========================================================================= */
 
@@ -519,6 +587,7 @@ static const vf_conversion_entry_t g_conversion_table[] = {
         { VF_PIXEL_FMT_NV12,    VF_PIXEL_FMT_RGB888,  convert_nv12_to_rgb888    },
         { VF_PIXEL_FMT_RAW8,    VF_PIXEL_FMT_RGB888,  convert_raw8_to_rgb888    },
         { VF_PIXEL_FMT_RAW8,    VF_PIXEL_FMT_YUV420P, convert_raw8_to_yuv420p   },
+        { VF_PIXEL_FMT_YUYV,    VF_PIXEL_FMT_RGB888,  convert_yuyv_to_rgb888    },
 };
 
 #define CONVERSION_TABLE_SIZE \
