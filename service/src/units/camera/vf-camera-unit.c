@@ -35,9 +35,9 @@
  * ========================================================================= */
 
 typedef struct {
-        vf_camera_t      camera;
-        vf_framebuffer_t fb;
-        vf_fb_params_t   fb_params;
+        vf_camera_t       camera;
+        vf_buf_pool_t    *pool;
+        vf_framebuffer_t *current_fb;
 } vf_camera_unit_data_t;
 
 /* =========================================================================
@@ -88,7 +88,7 @@ vf_err_t vf_camera_unit_init(void *ctx, ...)
 {
         vf_unit_t *unit = NULL;
         vf_camera_unit_data_t *data = NULL;
-        const vf_camera_cfg_t *cfg  = NULL;
+        vf_camera_unit_cfg_t *cfg  = NULL;
         vf_err_t err = VF_SUCCESS;
 
         if (NULL == ctx) {
@@ -101,42 +101,38 @@ vf_err_t vf_camera_unit_init(void *ctx, ...)
 
         log_info("Camera unit '%s' initialization started", unit->name);
 
-        cfg = (const vf_camera_cfg_t *)unit->internal_data;
+        cfg = (vf_camera_unit_cfg_t *)unit->internal_data;
         if (NULL == cfg) {
-                log_err("Camera unit '%s' has no configuration (internal_data is NULL)",
-                        unit->name);
+                log_err("Camera unit '%s' has no configuration", unit->name);
 
                 return VF_INVALID_PARAMETER;
         }
 
-        print_configuration(cfg);
+        if (NULL == cfg->pool) {
+                log_err("Camera unit '%s' has no buffer pool", unit->name);
+
+                return VF_INVALID_PARAMETER;
+        }
+
+        print_configuration(&cfg->camera_cfg);
 
         data = (vf_camera_unit_data_t *)calloc(1U, sizeof(vf_camera_unit_data_t));
         if (NULL == data) {
-                log_err("Failed to allocate camera unit data for unit '%s'",
-                        unit->name);
+                log_err("Failed to allocate camera unit data for unit '%s'", unit->name);
 
                 return VF_OOM;
         }
 
-        data->fb_params.width = cfg->width;
-        data->fb_params.height = cfg->height;
-        data->fb_params.format = cfg->format;
+        data->pool = cfg->pool;
 
-        err = vf_camera_init(&data->camera, cfg);
+        err = vf_camera_init(&data->camera, &cfg->camera_cfg);
         if (VF_SUCCESS != err) {
                 log_err("Failed to initialize camera for unit '%s': %s",
                         unit->name, vf_err2str(err));
 
-                goto free_data;
-        }
+                free(data);
 
-        err = vf_framebuffer_alloc(&data->fb, &data->fb_params);
-        if (VF_SUCCESS != err) {
-                log_err("Failed to allocate framebuffer for unit '%s': %s",
-                        unit->name, vf_err2str(err));
-
-                goto deinit_camera;
+                return err;
         }
 
         err = vf_camera_start(&data->camera);
@@ -144,7 +140,10 @@ vf_err_t vf_camera_unit_init(void *ctx, ...)
                 log_err("Failed to start camera for unit '%s': %s",
                         unit->name, vf_err2str(err));
 
-                goto free_framebuffer;
+                vf_camera_deinit(&data->camera);
+                free(data);
+
+                return err;
         }
 
         unit->internal_data = data;
@@ -152,20 +151,6 @@ vf_err_t vf_camera_unit_init(void *ctx, ...)
         log_info("Camera unit '%s' initialized successfully", unit->name);
 
         return VF_SUCCESS;
-
-free_framebuffer:
-        vf_framebuffer_free(&data->fb);
-
-deinit_camera:
-        err = vf_camera_deinit(&data->camera);
-        if (VF_SUCCESS != err) {
-                log_err("Failed to deinit the camera. Error: %d", err);
-        }
-
-free_data:
-        free(data);
-
-        return err;
 }
 
 vf_err_t vf_camera_unit_deinit(void *ctx, ...)
@@ -203,8 +188,6 @@ vf_err_t vf_camera_unit_deinit(void *ctx, ...)
                 return VF_CAMERA_DEINIT_ERR;
         }
 
-        vf_framebuffer_free(&data->fb);
-
         free(data);
 
         unit->internal_data = NULL;
@@ -235,10 +218,21 @@ vf_err_t vf_camera_unit_get_data(void *ctx, ...)
                 return VF_INVALID_PARAMETER;
         }
 
-        err = vf_camera_acquire_frame(&data->camera, &data->fb);
+        err = vf_buf_pool_acquire(data->pool, &data->current_fb);
+        if (VF_SUCCESS != err) {
+                log_err("Failed to acquire framebuffer from pool for unit '%s': %s",
+                        unit->name, vf_err2str(err));
+
+                return err;
+        }
+
+        err = vf_camera_acquire_frame(&data->camera, data->current_fb);
         if (VF_SUCCESS != err) {
                 log_err("Failed to acquire frame for unit '%s': %s",
                         unit->name, vf_err2str(err));
+
+                (void)vf_buf_pool_release(data->pool, data->current_fb);
+                data->current_fb = NULL;
 
                 return err;
         }
@@ -266,7 +260,6 @@ vf_err_t vf_camera_unit_send_data(void *ctx, ...)
         }
 
         unit = (vf_unit_t *)ctx;
-
         data = get_internal_data(unit);
         if (NULL == data) {
                 log_err("Failed to get the internal data. data=%p", (void *)data);
@@ -274,21 +267,32 @@ vf_err_t vf_camera_unit_send_data(void *ctx, ...)
                 return VF_INVALID_PARAMETER;
         }
 
-        err = vf_buf_queue_push(unit->out_queue, &data->fb);
+        if (NULL == data->current_fb) {
+                log_err("Camera unit '%s' has no current frame", unit->name);
+
+                return VF_INVALID_PARAMETER;
+        }
+
+        err = vf_buf_queue_push(unit->out_queue, data->current_fb);
         if (VF_SUCCESS != err) {
                 log_err("Failed to push frame to out_queue for unit '%s': %s",
                         unit->name, vf_err2str(err));
 
+                (void)vf_buf_pool_release(data->pool, data->current_fb);
+                data->current_fb = NULL;
+
                 return err;
         }
 
-        err = vf_notifier_publish(&unit->notifier, VF_NOTIFIER_EVENT_FRAME_READY, &data->fb);
+        err = vf_notifier_publish(&unit->notifier,
+                                  VF_NOTIFIER_EVENT_FRAME_READY,
+                                  data->current_fb);
         if (VF_SUCCESS != err) {
                 log_err("Failed to publish FRAME_READY for unit '%s': %s",
                         unit->name, vf_err2str(err));
-
-                return err;
         }
+
+        data->current_fb = NULL;
 
         return VF_SUCCESS;
 }
