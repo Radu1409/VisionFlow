@@ -19,8 +19,15 @@
 #ifndef VF_CAMERA_UNIT_H
 #define VF_CAMERA_UNIT_H
 
+#include "vf-buff-pool.h"
+#include "vf-camera.h"
 #include "vf-error.h"
 #include "vf-processing-unit.h"
+
+typedef struct {
+        vf_camera_cfg_t  camera_cfg;
+        vf_buf_pool_t   *pool;
+} vf_camera_unit_cfg_t;
 
 vf_err_t vf_camera_unit_init(void *ctx, ...);
 vf_err_t vf_camera_unit_deinit(void *ctx, ...);
