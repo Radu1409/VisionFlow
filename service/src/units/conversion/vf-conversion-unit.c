@@ -306,11 +306,15 @@ vf_err_t vf_conversion_unit_send_data(void *ctx, ...)
                 return err;
         }
 
-        if ((NULL != data->in_fb) && (NULL != data->src_pool)) {
-                buff_release_err = vf_buf_pool_release(data->src_pool, data->in_fb);
-                if (VF_SUCCESS != buff_release_err) {
-                        log_err("Failed to release framebuffer back to pool: %s",
-                                vf_err2str(buff_release_err));
+        if (NULL != data->in_fb) {
+                if (NULL != data->src_pool) {
+                        buff_release_err = vf_framebuffer_unref(data->in_fb,
+                                                                data->src_pool,
+                                                                (vf_fb_release_fn_t)vf_buf_pool_release);
+                        if (VF_SUCCESS != buff_release_err) {
+                                log_err("Failed to unref framebuffer: %s",
+                                        vf_err2str(buff_release_err));
+                        }
                 }
 
                 data->in_fb = NULL;
