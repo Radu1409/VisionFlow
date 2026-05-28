@@ -35,13 +35,13 @@
 #define VF_UNIT_TYPE_UNKNOWN_STR       "VF_UNIT_TYPE_UNKNOWN"
 
 typedef enum {
-        VF_UNIT_TYPE_UNKNOWN    = 0,
-        VF_UNIT_TYPE_FILE_IN    = 1,
-        VF_UNIT_TYPE_FILE_OUT   = 2,
-        VF_UNIT_TYPE_CONVERSION = 3,
-        VF_UNIT_TYPE_CAMERA     = 4,
-        VF_UNIT_TYPE_ENCODER    = 5,
-        VF_UNIT_TYPE_DISPLAY    = 6,
+        VF_UNIT_TYPE_UNKNOWN         = 0,
+        VF_UNIT_TYPE_FILE_IN         = 1,
+        VF_UNIT_TYPE_FILE_OUT        = 2,
+        VF_UNIT_TYPE_CONVERSION      = 3,
+        VF_UNIT_TYPE_CAMERA          = 4,
+        VF_UNIT_TYPE_ENCODER         = 5,
+        VF_UNIT_TYPE_DISPLAY         = 6,
         VF_UNIT_TYPE_STREAM_PROVIDER = 7,
         VF_UNIT_TYPE_MAX
 } vf_unit_type_t;
