@@ -46,6 +46,10 @@ CAMERA_UNIT_SRC_DIR := $(SERVICE_SRC_DIR)/units/camera
 CAMERA_UNIT_SRC     := $(CAMERA_UNIT_SRC_DIR)/vf-camera-unit.c
 CAMERA_UNIT_OBJ     := $(BUILD_DIR)/vf-camera-unit.o
 
+SP_UNIT_SRC_DIR := $(SERVICE_SRC_DIR)/units/stream-provider
+SP_UNIT_SRC     := $(SP_UNIT_SRC_DIR)/vf-stream-provider-unit.c
+SP_UNIT_OBJ     := $(BUILD_DIR)/vf-stream-provider-unit.o
+
 # Dependencies
 VF_COMMON_INC_DIR := $(PROJECT_ROOT)/libraries/vf_common/public
 VF_COMMON_LIB_DIR := $(PROJECT_ROOT)/libraries/vf_common/build
@@ -88,6 +92,7 @@ CFLAGS := -Wall -Wextra -Werror \
           -I$(FILE_UNIT_SRC_DIR) \
           -I$(CONVERSION_UNIT_SRC_DIR) \
           -I$(CAMERA_UNIT_SRC_DIR) \
+          -I$(SP_UNIT_SRC_DIR) \
           -I$(NOTIFIER_SRC_DIR) \
           -I$(VF_COMMON_INC_DIR) \
           -I$(VF_LOGGER_INC_DIR) \
@@ -112,7 +117,7 @@ LDFLAGS := $(VF_COMMON_LIB) $(VF_LOGGER_LIB)
 
 all: $(BUILD_DIR) vf_common vf_logger vf_framebuffer vf_file vf_conversion vf_camera \
      $(PARSER_OBJ) $(BUFFER_MGR_OBJ) $(CORE_OBJ) \
-     $(FILE_UNIT_OBJ) $(CONVERSION_UNIT_OBJ) $(CAMERA_UNIT_OBJ) $(NOTIFIER_OBJ) \
+     $(FILE_UNIT_OBJ) $(CONVERSION_UNIT_OBJ) $(CAMERA_UNIT_OBJ) $(SP_UNIT_OBJ) $(NOTIFIER_OBJ) \
      $(MAIN_OBJ) $(TARGET)
 
 vf_common:
@@ -171,6 +176,9 @@ $(CONVERSION_UNIT_OBJ): $(CONVERSION_UNIT_SRC)
 $(CAMERA_UNIT_OBJ): $(CAMERA_UNIT_SRC)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+$(SP_UNIT_OBJ): $(SP_UNIT_SRC)
+	$(CC) $(CFLAGS) -c $< -o $@
+
 $(NOTIFIER_OBJ): $(NOTIFIER_SRC)
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -178,7 +186,7 @@ $(MAIN_OBJ): $(MAIN_SRC)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(TARGET): $(PARSER_OBJ) $(BUFFER_MGR_OBJ) $(CORE_OBJ) \
-           $(FILE_UNIT_OBJ) $(CONVERSION_UNIT_OBJ) $(CAMERA_UNIT_OBJ) $(NOTIFIER_OBJ) \
+           $(FILE_UNIT_OBJ) $(CONVERSION_UNIT_OBJ) $(CAMERA_UNIT_OBJ) $(SP_UNIT_OBJ) $(NOTIFIER_OBJ) \
            $(MAIN_OBJ)
 	$(CC) $(CFLAGS) $^ \
 		$(VF_CAMERA_LIB) \
