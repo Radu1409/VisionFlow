@@ -42,6 +42,7 @@ typedef enum {
         VF_UNIT_TYPE_CAMERA     = 4,
         VF_UNIT_TYPE_ENCODER    = 5,
         VF_UNIT_TYPE_DISPLAY    = 6,
+        VF_UNIT_TYPE_STREAM_PROVIDER = 7,
         VF_UNIT_TYPE_MAX
 } vf_unit_type_t;
 
