@@ -210,6 +210,8 @@ vf_err_t vf_framebuffer_alloc(vf_framebuffer_t *fb, const vf_fb_params_t *params
 
         (void)memset(fb, 0, sizeof(*fb));
 
+        atomic_init(&fb->ref_count, 0U);
+
         fb->params = *params;
 
         rc = init_planes(fb, params);
@@ -585,6 +587,57 @@ vf_err_t vf_framebuffer_read_from_file(vf_framebuffer_t *fb, const char *filenam
         }
 
         return rc;
+}
+
+void vf_framebuffer_ref(vf_framebuffer_t *fb)
+{
+        if (NULL == fb) {
+                log_err("Invalid input: fb = %p", (void *)fb);
+
+                return;
+        }
+
+        (void)atomic_fetch_add(&fb->ref_count, 1U);
+
+        log_dbg("Framebuffer ref: ref_count=%u", atomic_load(&fb->ref_count));
+}
+
+vf_err_t vf_framebuffer_unref(vf_framebuffer_t *fb, void *pool, vf_fb_release_fn_t release_fn)
+{
+        uint32_t prev = 0U;
+
+        if (NULL == fb) {
+                log_err("Invalid input: fb = %p", (void *)fb);
+
+                return VF_INVALID_PARAMETER;
+        }
+
+        prev = atomic_fetch_sub(&fb->ref_count, 1U);
+
+        log_dbg("Framebuffer unref: prev_ref_count=%u", prev);
+
+        if (0U == prev) {
+                /* ref counting not used — undo decrement, do direct release */
+                atomic_fetch_add(&fb->ref_count, 1U);
+
+                if ((NULL != pool) && (NULL != release_fn)) {
+                        log_dbg("Framebuffer ref counting not used — direct release");
+
+                        return release_fn(pool, fb);
+                }
+
+                return VF_SUCCESS;
+        }
+
+        if (1U == prev) {
+                log_dbg("Framebuffer ref_count hit 0 — returning to pool");
+
+                if ((NULL != pool) && (NULL != release_fn)) {
+                        return release_fn(pool, fb);
+                }
+        }
+
+        return VF_SUCCESS;
 }
 
 vf_bpp_t vf_pixel_fmt_bpp(vf_pixel_fmt_t format)
