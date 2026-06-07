@@ -15,6 +15,7 @@
  **************************************************************************************************
  */
 
+#include <stdatomic.h>
 #include <string.h>
 #include <time.h>
 
@@ -35,6 +36,36 @@ uint64_t get_time_ms(void)
         (void)clock_gettime(CLOCK_MONOTONIC, &ts);
 
         return (uint64_t)(ts.tv_sec * MS_PER_SEC + ts.tv_nsec / NS_PER_MS);
+}
+
+static
+void *vf_unit_thread_fn(void *arg)
+{
+        vf_unit_t *unit = NULL;
+        vf_err_t err = VF_SUCCESS;
+
+        if (NULL == arg) {
+                log_err("Invalid input: arg = %p", (void*)arg);
+
+                return NULL;
+        }
+
+        unit = (vf_unit_t *)arg;
+
+        log_info("Unit '%s' thread started", unit->name ? unit->name : "unknown");
+
+        while (atomic_load(&unit->running)) {
+                err = vf_unit_run(unit);
+                if (VF_SUCCESS != err) {
+                        log_dbg("Unit '%s' run returned: %s — retrying",
+                                unit->name ? unit->name : "unknown",
+                                vf_err2str(err));
+                }
+        }
+
+        log_info("Unit '%s' thread stopped", unit->name ? unit->name : "unknown");
+
+        return NULL;
 }
 
 vf_err_t vf_unit_create(vf_unit_t *unit)
@@ -205,6 +236,80 @@ vf_err_t vf_unit_run(vf_unit_t *unit)
                 (unsigned long long)prc_ms,
                 (unsigned long long)snd_ms,
                 (unsigned long long)(get_ms + prc_ms + snd_ms));
+
+        return VF_SUCCESS;
+}
+
+vf_err_t vf_unit_start(vf_unit_t *unit)
+{
+        int rc = 0;
+
+        if (NULL == unit) {
+                log_err("Invalid input: unit = %p", (void *)unit);
+
+                return VF_INVALID_PARAMETER;
+        }
+
+        if (0 == unit->initialized) {
+                log_err("Unit '%s' not initialized",
+                        unit->name ? unit->name : "unknown");
+
+                return VF_INIT_FAILED;
+        }
+
+        atomic_store(&unit->running, true);
+
+        rc = pthread_create(&unit->thread, NULL, vf_unit_thread_fn, unit);
+        if (EOK != rc) {
+                log_err("Failed to create thread for unit '%s'. Error: %d",
+                        unit->name ? unit->name : "unknown", rc);
+
+                atomic_store(&unit->running, false);
+
+                return VF_SYNC_ERROR;
+        }
+
+        log_info("Unit '%s' thread launched", unit->name ? unit->name : "unknown");
+
+        return VF_SUCCESS;
+}
+
+vf_err_t vf_unit_stop(vf_unit_t *unit)
+{
+        int rc = 0;
+
+        if (NULL == unit) {
+                log_err("Invalid input: unit = %p", (void *)unit);
+
+                return VF_INVALID_PARAMETER;
+        }
+
+        if (false == atomic_load(&unit->running)) {
+                log_dbg("Unit '%s' already stopped",
+                        unit->name ? unit->name : "unknown");
+
+                return VF_SUCCESS;
+        }
+
+        atomic_store(&unit->running, false);
+
+        if (NULL != unit->in_queue) {
+                rc = pthread_cond_signal(&unit->in_queue->not_empty);
+                if (EOK != rc) {
+                        log_err("Failed to signal unit->in_queue condition variable. "
+                                "Error: %d", rc);
+                }
+        }
+
+        rc = pthread_join(unit->thread, NULL);
+        if (EOK != rc) {
+                log_err("Failed to join thread for unit '%s'. Error: %d",
+                        unit->name ? unit->name : "unknown", rc);
+
+                return VF_SYNC_ERROR;
+        }
+
+        log_info("Unit '%s' thread joined", unit->name ? unit->name : "unknown");
 
         return VF_SUCCESS;
 }
