@@ -257,8 +257,8 @@ vf_err_t vf_pipeline_stop(vf_pipeline_t *pipeline)
 
         log_info("Stopping pipeline '%s'", pipeline->name);
 
-        for (i = 0U; i < pipeline->unit_count; i++) {
-                err = vf_unit_stop(pipeline->units[i]);
+        for (i = pipeline->unit_count; i > 0U; i--) {
+                err = vf_unit_stop(pipeline->units[i - 1U]);
                 if (VF_SUCCESS != err) {
                         log_err("Failed to stop unit '%s': %s",
                                 pipeline->units[i]->name ? pipeline->units[i]->name : "unknown",
