@@ -25,9 +25,11 @@ CORE_SRC_DIR := $(SERVICE_SRC_DIR)/core
 CORE_SRC     := $(CORE_SRC_DIR)/vf-processing-unit.c
 CORE_SRC     += $(CORE_SRC_DIR)/vf-pipeline-mgr.c
 CORE_SRC     += $(CORE_SRC_DIR)/vf-core.c
+CORE_SRC     += $(CORE_SRC_DIR)/vf-service.c
 CORE_OBJ     := $(BUILD_DIR)/vf-processing-unit.o
 CORE_OBJ     += $(BUILD_DIR)/vf-pipeline-mgr.o
 CORE_OBJ     += $(BUILD_DIR)/vf-core.o
+CORE_OBJ     += $(BUILD_DIR)/vf-service.o
 
 # Main
 MAIN_SRC := $(SERVICE_SRC_DIR)/main.c
@@ -165,6 +167,9 @@ $(BUILD_DIR)/vf-pipeline-mgr.o: $(CORE_SRC_DIR)/vf-pipeline-mgr.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/vf-core.o: $(CORE_SRC_DIR)/vf-core.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/vf-service.o: $(CORE_SRC_DIR)/vf-service.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(FILE_UNIT_OBJ): $(FILE_UNIT_SRC)
