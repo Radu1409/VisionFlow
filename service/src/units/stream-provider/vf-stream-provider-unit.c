@@ -180,7 +180,7 @@ vf_err_t vf_stream_provider_unit_get_data(void *ctx, ...)
                 return VF_INVALID_PARAMETER;
         }
 
-        err = vf_buf_queue_pop(unit->in_queue, &data->current_fb);
+        err = vf_buf_queue_pop_blocking(unit->in_queue, &data->current_fb);
         if (VF_SUCCESS != err) {
                 log_dbg("in_queue empty for stream provider unit '%s'", unit->name);
 
