@@ -19,6 +19,8 @@
 #ifndef VF_PROCESSING_UNIT_H
 #define VF_PROCESSING_UNIT_H
 
+#include <pthread.h>
+#include <stdatomic.h>
 #include <stdint.h>
 
 #include "vf-buff-queue.h"
@@ -70,10 +72,15 @@ typedef struct vf_unit {
         vf_notifier_t        notifier;
 
         vf_unit_stats_t      stats;
+
+        pthread_t            thread;
+        atomic_bool          running;
 } vf_unit_t;
 
 vf_err_t vf_unit_create(vf_unit_t *unit);
 void vf_unit_destroy(vf_unit_t *unit);
+vf_err_t vf_unit_start(vf_unit_t *unit);
+vf_err_t vf_unit_stop(vf_unit_t *unit);
 vf_err_t vf_unit_run(vf_unit_t *unit);
 vf_err_t vf_unit_connect_input(vf_unit_t *unit, vf_buf_queue_t *queue);
 vf_err_t vf_unit_connect_output(vf_unit_t *unit, vf_buf_queue_t *queue);
