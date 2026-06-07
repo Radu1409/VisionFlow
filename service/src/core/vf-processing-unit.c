@@ -56,7 +56,18 @@ void *vf_unit_thread_fn(void *arg)
 
         while (atomic_load(&unit->running)) {
                 err = vf_unit_run(unit);
+                if (VF_QUEUE_SHUTDOWN == err) {
+                        log_dbg("Unit '%s' queue shutdown — stopping",
+                                unit->name ? unit->name : "unknown");
+
+                        break;
+                }
+
                 if (VF_SUCCESS != err) {
+                        if (!atomic_load(&unit->running)) {
+                                break;
+                        }
+
                         log_dbg("Unit '%s' run returned: %s — retrying",
                                 unit->name ? unit->name : "unknown",
                                 vf_err2str(err));
@@ -294,11 +305,7 @@ vf_err_t vf_unit_stop(vf_unit_t *unit)
         atomic_store(&unit->running, false);
 
         if (NULL != unit->in_queue) {
-                rc = pthread_cond_signal(&unit->in_queue->not_empty);
-                if (EOK != rc) {
-                        log_err("Failed to signal unit->in_queue condition variable. "
-                                "Error: %d", rc);
-                }
+                vf_buf_queue_shutdown(unit->in_queue);
         }
 
         rc = pthread_join(unit->thread, NULL);
