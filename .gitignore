@@ -2,9 +2,14 @@
 .vscode/
 
 # Build artifacts
+libvf_control/build/*.a
+libvf_control/build/*.o
+
 libraries/*/build/*.a
 libraries/*/build/*.o
+
 service/build/*.o
 service/build/vf_service
 
+test_clients/vf_client/build/vf_client
 
