@@ -35,6 +35,7 @@ typedef enum {
 
     VF_CONV_INIT_ERR               = 11,
     VF_CONV_PROCESSING_ERR         = 12,
+    VF_QUEUE_SHUTDOWN              = 13,
 
     VF_ERROR_MAX
 } vf_err_t;
