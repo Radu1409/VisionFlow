@@ -47,6 +47,7 @@ void vf_buf_queue_deinit(vf_buf_queue_t *queue);
 uint32_t vf_buf_queue_count(vf_buf_queue_t *queue);
 int vf_buf_queue_is_full(vf_buf_queue_t *queue);
 int vf_buf_queue_is_empty(vf_buf_queue_t *queue);
+void vf_buf_queue_reset(vf_buf_queue_t *queue);
 void vf_buf_queue_shutdown(vf_buf_queue_t *queue);
 
 #endif /* VF_BUFF_QUEUE_H */

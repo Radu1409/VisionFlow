@@ -22,6 +22,7 @@
 #include <time.h>
 
 #include "vf-core.h"
+#include "vf-control-server.h"
 #include "vf-error.h"
 #include "vf-logger.h"
 #include "vf-parser.h"
@@ -447,7 +448,8 @@ cleanup_pool_in:
 static
 vf_err_t run_camera_scenario(void)
 {
-        vf_service_t     svc = {0};
+        vf_service_t        svc      = {0};
+        vf_control_server_t ctrl_srv = {0};
         vf_service_cfg_t cfg = {
                 .device_path      = VF_CAMERA_DEVICE_PATH,
                 .width            = VF_CAMERA_WIDTH,
@@ -478,6 +480,36 @@ vf_err_t run_camera_scenario(void)
                 return err;
         }
 
+        err = vf_control_server_init(&ctrl_srv, &svc);
+        if (VF_SUCCESS != err) {
+                log_err("Failed to init control server: %s", vf_err2str(err));
+
+                err = vf_service_stop(&svc);
+                if (VF_SUCCESS != err) {
+                        log_err("Failed to stop service: %s", vf_err2str(err));
+                }
+
+                vf_service_deinit(&svc);
+
+                return err;
+        }
+
+        err = vf_control_server_start(&ctrl_srv);
+        if (VF_SUCCESS != err) {
+                log_err("Failed to start control server: %s", vf_err2str(err));
+
+                vf_control_server_deinit(&ctrl_srv);
+
+                err = vf_service_stop(&svc);
+                if (VF_SUCCESS != err) {
+                        log_err("Failed to stop service: %s", vf_err2str(err));
+                }
+
+                vf_service_deinit(&svc);
+
+                return err;
+        }
+
         log_info("Camera pipeline running — press Ctrl+C to stop");
 
         while (atomic_load_explicit(&g_running, memory_order_relaxed)) {
@@ -487,6 +519,13 @@ vf_err_t run_camera_scenario(void)
         }
 
         log_wrn("Shutdown signal received — stopping service");
+
+        err = vf_control_server_stop(&ctrl_srv);
+        if (VF_SUCCESS != err) {
+                log_err("Failed to stop control server: %s", vf_err2str(err));
+        }
+
+        vf_control_server_deinit(&ctrl_srv);
 
         err = vf_service_stop(&svc);
         if (VF_SUCCESS != err) {
