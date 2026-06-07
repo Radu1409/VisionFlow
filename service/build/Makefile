@@ -110,7 +110,7 @@ CFLAGS := -Wall -Wextra -Werror \
 
 LDFLAGS := $(VF_COMMON_LIB) $(VF_LOGGER_LIB)
 
-.PHONY: all clean run vf_common vf_logger vf_framebuffer vf_file vf_conversion vf_control \
+.PHONY: all clean run vf_common vf_logger vf_framebuffer vf_file vf_conversion vf_control vf_client \
         run-rgb_to_yuv_concat run-rgb_to_yuv_split \
         run-yuv_to_rgb_concat run-yuv_to_rgb_split \
         run-raw_to_rgb_concat run-raw_to_rgb_split \
@@ -122,7 +122,7 @@ LDFLAGS := $(VF_COMMON_LIB) $(VF_LOGGER_LIB)
         clean-camera-scenario \
         clean-all-scenarios
 
-all: $(BUILD_DIR) vf_common vf_logger vf_framebuffer vf_file vf_conversion vf_camera vf_control \
+all: $(BUILD_DIR) vf_common vf_logger vf_framebuffer vf_file vf_conversion vf_camera vf_control vf_client \
      $(PARSER_OBJ) $(BUFFER_MGR_OBJ) $(CORE_OBJ) \
      $(FILE_UNIT_OBJ) $(CONVERSION_UNIT_OBJ) $(CAMERA_UNIT_OBJ) $(SP_UNIT_OBJ) $(NOTIFIER_OBJ) \
      $(MAIN_OBJ) $(TARGET)
@@ -154,6 +154,10 @@ vf_camera:
 vf_control:
 	@echo "[service] Building vf_control..."
 	$(MAKE) -C $(VF_CONTROL_LIB_DIR)
+
+vf_client:
+	@echo "[service] Building vf_client..."
+	$(MAKE) -C $(PROJECT_ROOT)/test_clients/vf_client/build
 
 $(PARSER_OBJ): $(PARSER_SRC)
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -253,6 +257,7 @@ clean:
 	$(MAKE) -C $(VF_FRAMEBUFFER_LIB_DIR) clean
 	$(MAKE) -C $(VF_LOGGER_LIB_DIR) clean
 	$(MAKE) -C $(VF_COMMON_LIB_DIR) clean
+	$(MAKE) -C $(PROJECT_ROOT)/test_clients/vf_client/build clean
 	rm -f $(BUILD_DIR)/*.o
 	rm -f $(TARGET)
 	@echo "[service] clean done."
