@@ -21,20 +21,11 @@
 #include <string.h>
 #include <time.h>
 
-#include "vf-buff-pool.h"
-#include "vf-camera-unit.h"
-#include "vf-camera.h"
-#include "vf-conversion-unit.h"
-#include "vf-conversion.h"
 #include "vf-core.h"
 #include "vf-error.h"
-#include "vf-file-unit.h"
-#include "vf-framebuffer.h"
 #include "vf-logger.h"
 #include "vf-parser.h"
-#include "vf-pipeline-mgr.h"
-#include "vf-processing-unit.h"
-#include "vf-stream-provider-unit.h"
+#include "vf-service.h"
 
 #define MODULE_NAME                      "vf_core"
 #define CFG_PATH                         "vf_frames/conf/vf_frames_cfg.json"
@@ -456,242 +447,55 @@ cleanup_pool_in:
 static
 vf_err_t run_camera_scenario(void)
 {
-        vf_buf_pool_t            pool_in          = {0};
-        vf_buf_pool_t            pool_out         = {0};
-        vf_fb_params_t           params_in        = {0};
-        vf_fb_params_t           params_out       = {0};
-        vf_conversion_unit_cfg_t conv_cfg         = {0};
-        vf_file_unit_cfg_t       file_out_cfg     = {0};
-        vf_unit_t                camera_unit      = {0};
-        vf_unit_t                conv_unit        = {0};
-        vf_unit_t                file_out_unit    = {0};
-        vf_pipeline_t            pipeline         = {0};
-        vf_camera_unit_cfg_t     camera_unit_cfg  = {0};
-        vf_stream_provider_cfg_t sp_cfg           = {0};
-        vf_unit_t                sp_unit          = {0};
-        int                      pool_in_init     = 0;
-        int                      pool_out_init    = 0;
-        int                      pipeline_created = 0;
-        vf_err_t                 err              = VF_SUCCESS;
+        vf_service_t     svc = {0};
+        vf_service_cfg_t cfg = {
+                .device_path      = VF_CAMERA_DEVICE_PATH,
+                .width            = VF_CAMERA_WIDTH,
+                .height           = VF_CAMERA_HEIGHT,
+                .src_fmt          = VF_PIXEL_FMT_YUYV,
+                .dst_fmt          = VF_PIXEL_FMT_RGB888,
+                .pool_slot_count  = POOL_SLOT_COUNT,
+                .output_dir       = "vf_frames/out/camera",
+                .output_extension = ".rgb",
+        };
+        vf_err_t err = VF_SUCCESS;
 
         log_info("=== Running scenario: camera ===");
 
-        /* ----------------------------------------------------------------
-         * 1. Setup framebuffer params
-         * ---------------------------------------------------------------- */
-        params_in.width = VF_CAMERA_WIDTH;
-        params_in.height = VF_CAMERA_HEIGHT;
-        params_in.format = VF_PIXEL_FMT_YUYV;
-
-        params_out.width = VF_CAMERA_WIDTH;
-        params_out.height = VF_CAMERA_HEIGHT;
-        params_out.format = VF_PIXEL_FMT_RGB888;
-
-        /* ----------------------------------------------------------------
-         * 2. Init buffer pools
-         * ---------------------------------------------------------------- */
-        err = vf_buf_pool_init(&pool_in, &params_in, POOL_SLOT_COUNT);
+        err = vf_service_init(&svc, &cfg);
         if (VF_SUCCESS != err) {
-                log_err("Failed to init input pool: %s", vf_err2str(err));
+                log_err("Failed to init service: %s", vf_err2str(err));
 
                 return err;
         }
 
-        pool_in_init = 1;
-
-        err = vf_buf_pool_init(&pool_out, &params_out, POOL_SLOT_COUNT);
+        err = vf_service_start(&svc);
         if (VF_SUCCESS != err) {
-                log_err("Failed to init output pool: %s", vf_err2str(err));
+                log_err("Failed to start service: %s", vf_err2str(err));
 
-                goto cleanup_pool_in;
-        }
+                vf_service_deinit(&svc);
 
-        pool_out_init = 1;
-
-        /* ----------------------------------------------------------------
-         * 3. Configure units
-         * ---------------------------------------------------------------- */
-
-        /* CAMERA_IN */
-        (void)snprintf(camera_unit_cfg.camera_cfg.device_path,
-                       sizeof(camera_unit_cfg.camera_cfg.device_path),
-                       "%s", VF_CAMERA_DEVICE_PATH);
-
-        camera_unit_cfg.camera_cfg.width = VF_CAMERA_WIDTH;
-        camera_unit_cfg.camera_cfg.height = VF_CAMERA_HEIGHT;
-        camera_unit_cfg.camera_cfg.format = VF_PIXEL_FMT_YUYV;
-        camera_unit_cfg.camera_cfg.buffer_count = VF_CAMERA_DEFAULT_BUFFER_COUNT;
-        camera_unit_cfg.pool = &pool_in;
-
-        camera_unit.type = VF_UNIT_TYPE_CAMERA;
-        camera_unit.name = VF_UNIT_NAME_CAMERA_STR;
-        camera_unit.internal_data = &camera_unit_cfg;
-
-        /* STREAM PROVIDER */
-        sp_cfg.consumer_count = 1U;
-        sp_cfg.src_pool = &pool_in;
-
-        sp_unit.type = VF_UNIT_TYPE_STREAM_PROVIDER;
-        sp_unit.name = VF_UNIT_NAME_STREAM_PROVIDER_STR;
-        sp_unit.internal_data = &sp_cfg;
-
-        err = vf_stream_provider_unit_init_operations(&sp_unit.operations);
-        if (VF_SUCCESS != err) {
-                log_err("Stream provider unit init operations failed: %s", vf_err2str(err));
-
-                goto cleanup_pool_out;
-        }
-
-        err = vf_camera_unit_init_operations(&camera_unit.operations);
-        if (VF_SUCCESS != err) {
-                log_err("Camera unit init operations failed: %s", vf_err2str(err));
-
-                goto cleanup_pool_out;
-        }
-
-        /* CONVERSION */
-        conv_cfg.src_fmt = VF_PIXEL_FMT_YUYV;
-        conv_cfg.dst_fmt = VF_PIXEL_FMT_RGB888;
-        conv_cfg.dst_params = params_out;
-        conv_cfg.pool = &pool_out;
-        conv_cfg.src_pool = &pool_in;
-
-        conv_unit.type = VF_UNIT_TYPE_CONVERSION;
-        conv_unit.name = VF_UNIT_NAME_CONVERSION_STR;
-        conv_unit.internal_data = &conv_cfg;
-
-        err = vf_conversion_unit_init_operations(&conv_unit.operations);
-        if (VF_SUCCESS != err) {
-                log_err("Conversion unit init operations failed: %s", vf_err2str(err));
-
-                goto cleanup_pool_out;
-        }
-
-        /* FILE_OUT */
-        file_out_cfg.fb_params = params_out;
-        file_out_cfg.pool = &pool_out;
-        file_out_cfg.mode = VF_FILE_UNIT_MODE_OUT;
-        file_out_cfg.split_output = 1;
-        file_out_cfg.output_extension = ".rgb";
-        file_out_cfg.frame_set = NULL;
-
-        (void)snprintf(file_out_cfg.output_dir, sizeof(file_out_cfg.output_dir),
-                       "vf_frames/out/camera");
-
-        file_out_unit.type = VF_UNIT_TYPE_FILE_OUT;
-        file_out_unit.name = VF_UNIT_NAME_FILE_OUT_STR;
-        file_out_unit.internal_data = &file_out_cfg;
-
-        err = vf_file_unit_init_operations(&file_out_unit.operations);
-        if (VF_SUCCESS != err) {
-                log_err("File unit init OUT operations failed: %s", vf_err2str(err));
-
-                goto cleanup_pool_out;
-        }
-
-        /* ----------------------------------------------------------------
-         * 4. Build pipeline
-         * ---------------------------------------------------------------- */
-        err = vf_pipeline_init(&pipeline, "camera");
-        if (VF_SUCCESS != err) {
-                log_err("Failed to init pipeline: %s", vf_err2str(err));
-
-                goto cleanup_pool_out;
-        }
-
-        err = vf_pipeline_add_unit(&pipeline, &camera_unit);
-        if (VF_SUCCESS != err) {
-                log_err("Failed to add unit '%s' to pipeline: %s",
-                        camera_unit.name, vf_err2str(err));
-
-                goto cleanup_pool_out;
-        }
-
-        err = vf_pipeline_add_unit(&pipeline, &sp_unit);
-        if (VF_SUCCESS != err) {
-                log_err("Failed to add unit '%s' to pipeline: %s",
-                        sp_unit.name, vf_err2str(err));
-
-                goto cleanup_pool_out;
-        }
-
-        err = vf_pipeline_add_unit(&pipeline, &conv_unit);
-        if (VF_SUCCESS != err) {
-                log_err("Failed to add unit '%s' to pipeline: %s",
-                        conv_unit.name, vf_err2str(err));
-
-                goto cleanup_pool_out;
-        }
-
-        err = vf_pipeline_add_unit(&pipeline, &file_out_unit);
-        if (VF_SUCCESS != err) {
-                log_err("Failed to add unit '%s' to pipeline: %s",
-                        file_out_unit.name, vf_err2str(err));
-
-                goto cleanup_pool_out;
-        }
-
-        err = vf_pipeline_create(&pipeline);
-        if (VF_SUCCESS != err) {
-                log_err("Failed to create pipeline: %s", vf_err2str(err));
-
-                goto cleanup_pool_out;
-        }
-
-        pipeline_created = 1;
-
-        /* ----------------------------------------------------------------
-         * 5. Start pipeline threads
-         * ---------------------------------------------------------------- */
-        err = vf_pipeline_start(&pipeline);
-        if (VF_SUCCESS != err) {
-                log_err("Failed to start pipeline: %s", vf_err2str(err));
-
-                goto cleanup_pipeline;
+                return err;
         }
 
         log_info("Camera pipeline running — press Ctrl+C to stop");
 
-        /* ----------------------------------------------------------------
-         * 6. Wait for shutdown signal
-         * ---------------------------------------------------------------- */
         while (atomic_load_explicit(&g_running, memory_order_relaxed)) {
-                struct timespec ts = { .tv_sec = 0, .tv_nsec = 100000000 }; /* 100ms */
+                struct timespec ts = { .tv_sec = 0, .tv_nsec = 100000000 };
 
                 (void)nanosleep(&ts, NULL);
         }
 
-        log_wrn("Shutdown signal received — stopping pipeline");
+        log_wrn("Shutdown signal received — stopping service");
 
-        vf_buf_pool_shutdown(&pool_in);
-        vf_buf_pool_shutdown(&pool_out);
-
-        err = vf_pipeline_stop(&pipeline);
+        err = vf_service_stop(&svc);
         if (VF_SUCCESS != err) {
-                log_err("Failed to stop pipeline: %s", vf_err2str(err));
-
-                goto cleanup_pipeline;
+                log_err("Failed to stop service: %s", vf_err2str(err));
         }
+
+        vf_service_deinit(&svc);
 
         log_info("Camera scenario stopped");
-
-        /* ----------------------------------------------------------------
-         * 7. Cleanup
-         * ---------------------------------------------------------------- */
-cleanup_pipeline:
-        if (1 == pipeline_created) {
-                vf_pipeline_destroy(&pipeline);
-        }
-
-cleanup_pool_out:
-        if (1 == pool_out_init) {
-                vf_buf_pool_deinit(&pool_out);
-        }
-
-cleanup_pool_in:
-        if (1 == pool_in_init) {
-                vf_buf_pool_deinit(&pool_in);
-        }
 
         return err;
 }
