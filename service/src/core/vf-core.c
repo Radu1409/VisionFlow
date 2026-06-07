@@ -19,12 +19,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "vf-buff-pool.h"
 #include "vf-camera-unit.h"
 #include "vf-camera.h"
 #include "vf-conversion-unit.h"
 #include "vf-conversion.h"
+#include "vf-core.h"
 #include "vf-error.h"
 #include "vf-file-unit.h"
 #include "vf-framebuffer.h"
@@ -471,7 +473,6 @@ vf_err_t run_camera_scenario(void)
         int                      pool_out_init    = 0;
         int                      pipeline_created = 0;
         vf_err_t                 err              = VF_SUCCESS;
-        uint32_t                 i                = 0U;
 
         log_info("=== Running scenario: camera ===");
 
@@ -640,30 +641,41 @@ vf_err_t run_camera_scenario(void)
         pipeline_created = 1;
 
         /* ----------------------------------------------------------------
-         * 5. Run pipeline for N frames
+         * 5. Start pipeline threads
          * ---------------------------------------------------------------- */
-        log_info("Camera pipeline started — capturing %u frames", VF_CAMERA_FRAME_COUNT);
+        err = vf_pipeline_start(&pipeline);
+        if (VF_SUCCESS != err) {
+                log_err("Failed to start pipeline: %s", vf_err2str(err));
 
-        for (i = 0U; i < VF_CAMERA_FRAME_COUNT; i++) {
-                log_info("Processing camera frame [%u/%u]", i + 1U, VF_CAMERA_FRAME_COUNT);
-
-                err = vf_pipeline_run_once(&pipeline);
-                if (VF_SUCCESS != err) {
-                        log_err("Pipeline run failed at frame %u: %s",
-                                i, vf_err2str(err));
-
-                        break;
-                }
+                goto cleanup_pipeline;
         }
 
-        if (VF_SUCCESS == err) {
-                log_info("Camera scenario completed — %u frame(s) processed",
-                         VF_CAMERA_FRAME_COUNT);
-        }
+        log_info("Camera pipeline running — press Ctrl+C to stop");
 
         /* ----------------------------------------------------------------
-         * 6. Cleanup
+         * 6. Wait for shutdown signal
          * ---------------------------------------------------------------- */
+        while (atomic_load_explicit(&g_running, memory_order_relaxed)) {
+                struct timespec ts = { .tv_sec = 0, .tv_nsec = 100000000 }; /* 100ms */
+
+                (void)nanosleep(&ts, NULL);
+        }
+
+        log_wrn("Shutdown signal received — stopping pipeline");
+
+        err = vf_pipeline_stop(&pipeline);
+        if (VF_SUCCESS != err) {
+                log_err("Failed to stop pipeline: %s", vf_err2str(err));
+
+                goto cleanup_pipeline;
+        }
+
+        log_info("Camera scenario stopped");
+
+        /* ----------------------------------------------------------------
+         * 7. Cleanup
+         * ---------------------------------------------------------------- */
+cleanup_pipeline:
         if (1 == pipeline_created) {
                 vf_pipeline_destroy(&pipeline);
         }

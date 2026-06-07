@@ -18,6 +18,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
+#include <stdatomic.h>
+#include <stdbool.h>
 
 #include "vf-core.h"
 #include "vf-error.h"
@@ -33,6 +36,16 @@
 #define OPT_RAW_TO_YUV_CONCAT 8
 #define OPT_RAW_TO_YUV_SPLIT  9
 #define OPT_CAMERA            10
+
+atomic_bool g_running = true;
+
+static
+void signal_handler(int signum)
+{
+        (void)signum;
+
+        atomic_store(&g_running, false);
+}
 
 /* *DISABLE FORMATTER* - DO NOT REMOVE. Formatter rule exception! */
 static struct option g_long_options[] = {
@@ -83,6 +96,9 @@ int main(int argc, char *argv[])
         }
 
         log_info("=== VisionFlow Service Start ===");
+
+        (void)signal(SIGINT,  signal_handler);
+        (void)signal(SIGTERM, signal_handler);
 
         if (argc < 2) {
                 print_usage(argv[0]);
