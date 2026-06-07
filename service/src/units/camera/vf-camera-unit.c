@@ -218,7 +218,7 @@ vf_err_t vf_camera_unit_get_data(void *ctx, ...)
                 return VF_INVALID_PARAMETER;
         }
 
-        err = vf_buf_pool_acquire(data->pool, &data->current_fb);
+        err = vf_buf_pool_acquire_blocking(data->pool, &data->current_fb);
         if (VF_SUCCESS != err) {
                 log_err("Failed to acquire framebuffer from pool for unit '%s': %s",
                         unit->name, vf_err2str(err));

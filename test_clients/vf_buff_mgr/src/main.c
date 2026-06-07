@@ -220,7 +220,7 @@ int test_queue_push_pop(void)
                 return 1;
         }
 
-        err = vf_buf_queue_pop(&queue, &fb_out);
+        err = vf_buf_queue_pop_blocking(&queue, &fb_out);
         if ((VF_SUCCESS != err) || (NULL == fb_out)) {
                 log_err("pop failed");
 

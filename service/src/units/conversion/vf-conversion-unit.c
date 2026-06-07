@@ -179,7 +179,7 @@ vf_err_t vf_conversion_unit_get_data(void *ctx, ...)
                 return VF_INVALID_PARAMETER;
         }
 
-        err = vf_buf_queue_pop(unit->in_queue, &data->in_fb);
+        err = vf_buf_queue_pop_blocking(unit->in_queue, &data->in_fb);
         if (VF_SUCCESS != err) {
                 log_dbg("in_queue empty for unit '%s'", unit->name ? unit->name : "unknown");
 
@@ -221,7 +221,7 @@ vf_err_t vf_conversion_unit_process_data(void *ctx, ...)
         }
 
         /* Acquire output buffer from pool */
-        err = vf_buf_pool_acquire(data->pool, &data->out_fb);
+        err = vf_buf_pool_acquire_blocking(data->pool, &data->out_fb);
         if (VF_SUCCESS != err) {
                 log_err("Failed to acquire output buffer from pool: %s", vf_err2str(err));
 
