@@ -232,6 +232,12 @@ vf_err_t vf_service_start(vf_service_t *svc)
                 return VF_INIT_FAILED;
         }
 
+        vf_buf_pool_reset(&svc->pool_in);
+        vf_buf_pool_reset(&svc->pool_out);
+        vf_buf_queue_reset(&svc->pipeline.queues[0]);
+        vf_buf_queue_reset(&svc->pipeline.queues[1]);
+        vf_buf_queue_reset(&svc->pipeline.queues[2]);
+
         err = vf_pipeline_start(&svc->pipeline);
         if (VF_SUCCESS != err) {
                 log_err("Failed to start pipeline: %s", vf_err2str(err));

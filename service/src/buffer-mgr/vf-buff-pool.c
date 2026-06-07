@@ -323,6 +323,17 @@ vf_err_t vf_buf_pool_release(vf_buf_pool_t *pool, vf_framebuffer_t *fb)
         return VF_SUCCESS;
 }
 
+void vf_buf_pool_reset(vf_buf_pool_t *pool)
+{
+        if (NULL == pool) {
+                log_err("Invalid input param: pool=%p", (void*)pool);
+
+                return;
+        }
+
+        atomic_store(&pool->shutdown, false);
+}
+
 void vf_buf_pool_deinit(vf_buf_pool_t *pool)
 {
         uint32_t i = 0U;

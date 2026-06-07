@@ -275,6 +275,17 @@ vf_err_t vf_buf_queue_pop_blocking(vf_buf_queue_t *queue, vf_framebuffer_t **out
         return VF_SUCCESS;
 }
 
+void vf_buf_queue_reset(vf_buf_queue_t *queue)
+{
+        if (NULL == queue) {
+                log_err("Invalid input param: queue=%p", (void*)queue);
+
+                return;
+        }
+
+        atomic_store(&queue->shutdown, false);
+}
+
 void vf_buf_queue_deinit(vf_buf_queue_t *queue)
 {
         int rc = 0;

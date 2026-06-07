@@ -43,6 +43,7 @@ vf_err_t vf_buf_pool_acquire_blocking(vf_buf_pool_t *pool, vf_framebuffer_t **ou
 vf_err_t vf_buf_pool_release(vf_buf_pool_t *pool, vf_framebuffer_t *fb);
 void vf_buf_pool_deinit(vf_buf_pool_t *pool);
 uint32_t vf_buf_pool_available(vf_buf_pool_t *pool);
+void vf_buf_pool_reset(vf_buf_pool_t *pool);
 void vf_buf_pool_shutdown(vf_buf_pool_t *pool);
 
 #endif /* VF_BUFF_POOL_H */
