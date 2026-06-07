@@ -66,6 +66,8 @@ vf_err_t vf_buf_queue_init(vf_buf_queue_t *queue, uint32_t capacity)
         queue->count = 0U;
         queue->initialized = 1;
 
+        atomic_store(&queue->shutdown, false);
+
         log_info("Buffer queue initialized: capacity=%u", capacity);
 
         return VF_SUCCESS;
@@ -185,6 +187,24 @@ vf_err_t vf_buf_queue_pop(vf_buf_queue_t *queue, vf_framebuffer_t **out_fb)
         return VF_SUCCESS;
 }
 
+void vf_buf_queue_shutdown(vf_buf_queue_t *queue)
+{
+        int rc = 0;
+
+        if (NULL == queue) {
+                log_err("Invalid input: queue = %p", (void *)queue);
+
+                return;
+        }
+
+        atomic_store(&queue->shutdown, true);
+
+        rc = pthread_cond_broadcast(&queue->not_empty);
+        if (EOK != rc) {
+                log_err("Failed to broadcast queue condition variable. Error: %d", rc);
+        }
+}
+
 vf_err_t vf_buf_queue_pop_blocking(vf_buf_queue_t *queue, vf_framebuffer_t **out_fb)
 {
         int rc = 0;
@@ -212,6 +232,17 @@ vf_err_t vf_buf_queue_pop_blocking(vf_buf_queue_t *queue, vf_framebuffer_t **out
         }
 
         while (0U == queue->count) {
+                if (atomic_load(&queue->shutdown)) {
+                        rc = pthread_mutex_unlock(&queue->lock);
+                        if (EOK != rc) {
+                                log_err("Failed to unlock queue mutex. Error: %d", rc);
+
+                                return VF_SYNC_ERROR;
+                        }
+
+                        return VF_QUEUE_SHUTDOWN;
+                }
+
                 rc = pthread_cond_wait(&queue->not_empty, &queue->lock);
                 if (EOK != rc) {
                         log_err("Failed to wait on condition variable. Error: %d", rc);
@@ -262,6 +293,9 @@ void vf_buf_queue_deinit(vf_buf_queue_t *queue)
 
         if (0U < queue->count) {
                 log_wrn("Queue deinit with %u frame(s) still in queue", queue->count);
+                /* Frames are not unref'd here — queue does not own pool context.
+                 * Remaining frames will be freed by vf_buf_pool_deinit.
+                 * TODO: drain queue with release callback before deinit. */
         }
 
         rc = pthread_mutex_destroy(&queue->lock);

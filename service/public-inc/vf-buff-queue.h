@@ -19,6 +19,7 @@
 #define VF_BUFF_QUEUE_H
 
 #include <pthread.h>
+#include <stdatomic.h>
 #include <stdint.h>
 
 #include "vf-error.h"
@@ -35,6 +36,7 @@ typedef struct {
         pthread_mutex_t   lock;
         pthread_cond_t    not_empty;
         int               initialized;
+        atomic_bool       shutdown;
 } vf_buf_queue_t;
 
 vf_err_t vf_buf_queue_init(vf_buf_queue_t *queue, uint32_t capacity);
@@ -45,6 +47,7 @@ void vf_buf_queue_deinit(vf_buf_queue_t *queue);
 uint32_t vf_buf_queue_count(vf_buf_queue_t *queue);
 int vf_buf_queue_is_full(vf_buf_queue_t *queue);
 int vf_buf_queue_is_empty(vf_buf_queue_t *queue);
+void vf_buf_queue_shutdown(vf_buf_queue_t *queue);
 
 #endif /* VF_BUFF_QUEUE_H */
 
