@@ -32,11 +32,13 @@ typedef struct {
         uint32_t          capacity;
         uint32_t          available;
         pthread_mutex_t   lock;
+        pthread_cond_t    slot_available;
         int               initialized;
 } vf_buf_pool_t;
 
 vf_err_t vf_buf_pool_init(vf_buf_pool_t *pool, const vf_fb_params_t *params, uint32_t slot_count);
 vf_err_t vf_buf_pool_acquire(vf_buf_pool_t *pool, vf_framebuffer_t **out_fb);
+vf_err_t vf_buf_pool_acquire_blocking(vf_buf_pool_t *pool, vf_framebuffer_t **out_fb);
 vf_err_t vf_buf_pool_release(vf_buf_pool_t *pool, vf_framebuffer_t *fb);
 void vf_buf_pool_deinit(vf_buf_pool_t *pool);
 uint32_t vf_buf_pool_available(vf_buf_pool_t *pool);

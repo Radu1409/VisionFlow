@@ -53,6 +53,18 @@ vf_err_t vf_buf_pool_init(vf_buf_pool_t *pool, const vf_fb_params_t *params,
                 return VF_SYNC_ERROR;
         }
 
+        rc = pthread_cond_init(&pool->slot_available, NULL);
+        if (EOK != rc) {
+                log_err("Failed to initialize pool cond. Error: %d", rc);
+
+                rc = pthread_mutex_destroy(&pool->lock);
+                if (EOK != rc) {
+                        log_err("Failed to destroy pool mutex. Error: %d", rc);
+                }
+
+                return VF_SYNC_ERROR;
+        }
+
         for (i = 0U; i < slot_count; i++) {
                 err = vf_framebuffer_alloc(&pool->slots[i], params);
                 if (VF_SUCCESS != err) {
@@ -149,6 +161,71 @@ vf_err_t vf_buf_pool_acquire(vf_buf_pool_t *pool, vf_framebuffer_t **out_fb)
         return VF_SUCCESS;
 }
 
+vf_err_t vf_buf_pool_acquire_blocking(vf_buf_pool_t *pool, vf_framebuffer_t **out_fb)
+{
+        uint32_t i = 0U;
+        int rc = 0;
+
+        if ((NULL == pool) || (NULL == out_fb)) {
+                log_err("Invalid params: pool=%p out_fb=%p",
+                        (void *)pool, (void *)out_fb);
+
+                return VF_INVALID_PARAMETER;
+        }
+
+        if (0 == pool->initialized) {
+                log_err("Pool not initialized");
+
+                return VF_INIT_FAILED;
+        }
+
+        *out_fb = NULL;
+
+        rc = pthread_mutex_lock(&pool->lock);
+        if (EOK != rc) {
+                log_err("Failed to lock pool mutex. Error: %d", rc);
+
+                return VF_SYNC_ERROR;
+        }
+
+        while (0U == pool->available) {
+                rc = pthread_cond_wait(&pool->slot_available, &pool->lock);
+                if (EOK != rc) {
+                        log_err("Failed to wait on pool cond. Error: %d", rc);
+
+                        rc = pthread_mutex_unlock(&pool->lock);
+                        if (EOK != rc) {
+                                log_err("Failed to unlock pool mutex. Error: %d", rc);
+
+                                return VF_SYNC_ERROR;
+                        }
+
+                        return VF_SYNC_ERROR;
+                }
+        }
+
+        for (i = 0U; i < pool->capacity; i++) {
+                if (0U == pool->in_use[i]) {
+                        pool->in_use[i] = 1U;
+                        pool->available--;
+                        *out_fb = &pool->slots[i];
+
+                        break;
+                }
+        }
+
+        rc = pthread_mutex_unlock(&pool->lock);
+        if (EOK != rc) {
+                log_err("Failed to unlock pool mutex. Error: %d", rc);
+
+                return VF_SYNC_ERROR;
+        }
+
+        log_dbg("Slot acquired (blocking): index=%u available=%u", i, pool->available);
+
+        return VF_SUCCESS;
+}
+
 vf_err_t vf_buf_pool_release(vf_buf_pool_t *pool, vf_framebuffer_t *fb)
 {
         uint32_t i = 0U;
@@ -182,6 +259,13 @@ vf_err_t vf_buf_pool_release(vf_buf_pool_t *pool, vf_framebuffer_t *fb)
                         } else {
                                 pool->in_use[i] = 0U;
                                 pool->available++;
+
+                                rc = pthread_cond_signal(&pool->slot_available);
+                                if (EOK != rc) {
+                                        log_err("Failed to signal pool condition variable. "
+                                                "Error: %d", rc);
+                                }
+
                         }
 
                         found = 1;
@@ -236,6 +320,11 @@ void vf_buf_pool_deinit(vf_buf_pool_t *pool)
         rc = pthread_mutex_destroy(&pool->lock);
         if (EOK != rc) {
                 log_err("Failed to destroy pool mutex. Error: %d", rc);
+        }
+
+        rc = pthread_cond_destroy(&pool->slot_available);
+        if (EOK != rc) {
+                log_err("Failed to destroy pool cond. Error: %d", rc);
         }
 
         (void)memset(pool, 0, sizeof(*pool));
