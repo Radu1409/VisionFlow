@@ -158,6 +158,8 @@ vf_control:
 vf_client:
 	@echo "[service] Building vf_client..."
 	$(MAKE) -C $(PROJECT_ROOT)/test_clients/vf_client/build
+	sudo ln -sf $(abspath $(PROJECT_ROOT)/test_clients/vf_client/build/vf_client) /usr/local/bin/vf_client
+	@echo "[service] vf_client installed to /usr/local/bin/vf_client"
 
 $(PARSER_OBJ): $(PARSER_SRC)
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -217,6 +219,8 @@ $(TARGET): $(PARSER_OBJ) $(BUFFER_MGR_OBJ) $(CORE_OBJ) \
 		-lpthread \
 		-o $@
 	@echo "[service] Built $(TARGET)"
+	sudo ln -sf $(abspath $(TARGET)) /usr/local/bin/vf_service
+	@echo "[service] vf_service installed to /usr/local/bin/vf_service"
 
 run: all
 	cd $(PROJECT_ROOT) && ./service/build/vf_service --all
@@ -258,8 +262,10 @@ clean:
 	$(MAKE) -C $(VF_LOGGER_LIB_DIR) clean
 	$(MAKE) -C $(VF_COMMON_LIB_DIR) clean
 	$(MAKE) -C $(PROJECT_ROOT)/test_clients/vf_client/build clean
+	sudo rm -f /usr/local/bin/vf_client
 	rm -f $(BUILD_DIR)/*.o
 	rm -f $(TARGET)
+	sudo rm -f /usr/local/bin/vf_service
 	@echo "[service] clean done."
 
 clean-camera-scenario:
