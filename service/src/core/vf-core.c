@@ -663,6 +663,9 @@ vf_err_t run_camera_scenario(void)
 
         log_wrn("Shutdown signal received — stopping pipeline");
 
+        vf_buf_pool_shutdown(&pool_in);
+        vf_buf_pool_shutdown(&pool_out);
+
         err = vf_pipeline_stop(&pipeline);
         if (VF_SUCCESS != err) {
                 log_err("Failed to stop pipeline: %s", vf_err2str(err));
