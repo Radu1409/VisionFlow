@@ -191,6 +191,86 @@ vf_err_t vf_pipeline_run_once(vf_pipeline_t *pipeline)
         return VF_SUCCESS;
 }
 
+vf_err_t vf_pipeline_start(vf_pipeline_t *pipeline)
+{
+        uint32_t i = 0U;
+        vf_err_t err = VF_SUCCESS;
+
+        if (NULL == pipeline) {
+                log_err("Invalid input: pipeline = %p", (void *)pipeline);
+
+                return VF_INVALID_PARAMETER;
+        }
+
+        if (0 == pipeline->initialized) {
+                log_err("Pipeline '%s' not initialized", pipeline->name);
+
+                return VF_INIT_FAILED;
+        }
+
+        log_info("Starting pipeline '%s' — launching %u thread(s)",
+                 pipeline->name, pipeline->unit_count);
+
+        for (i = 0U; i < pipeline->unit_count; i++) {
+                err = vf_unit_start(pipeline->units[i]);
+                if (VF_SUCCESS != err) {
+                        log_err("Failed to start unit '%s': %s",
+                                pipeline->units[i]->name ? pipeline->units[i]->name : "unknown",
+                                vf_err2str(err));
+
+                        /* Stop units already started */
+                        while (i > 0U) {
+                                i--;
+                                err = vf_unit_stop(pipeline->units[i]);
+                                if (VF_SUCCESS != err) {
+                                        log_err("Failed to stop unit '%s': %s",
+                                                pipeline->units[i]->name ? pipeline->units[i]->name : "unknown",
+                                                vf_err2str(err));
+                                }
+                        }
+
+                        return err;
+                }
+        }
+
+        log_info("Pipeline '%s' started successfully", pipeline->name);
+
+        return VF_SUCCESS;
+}
+
+vf_err_t vf_pipeline_stop(vf_pipeline_t *pipeline)
+{
+        uint32_t i = 0U;
+        vf_err_t err = VF_SUCCESS;
+
+        if (NULL == pipeline) {
+                log_err("Invalid input: pipeline = %p", (void *)pipeline);
+
+                return VF_INVALID_PARAMETER;
+        }
+
+        if (0 == pipeline->initialized) {
+                log_err("Pipeline '%s' not initialized", pipeline->name);
+
+                return VF_INIT_FAILED;
+        }
+
+        log_info("Stopping pipeline '%s'", pipeline->name);
+
+        for (i = 0U; i < pipeline->unit_count; i++) {
+                err = vf_unit_stop(pipeline->units[i]);
+                if (VF_SUCCESS != err) {
+                        log_err("Failed to stop unit '%s': %s",
+                                pipeline->units[i]->name ? pipeline->units[i]->name : "unknown",
+                                vf_err2str(err));
+                }
+        }
+
+        log_info("Pipeline '%s' stopped", pipeline->name);
+
+        return VF_SUCCESS;
+}
+
 void vf_pipeline_destroy(vf_pipeline_t *pipeline)
 {
         uint32_t i = 0U;

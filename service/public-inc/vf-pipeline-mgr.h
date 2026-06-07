@@ -38,6 +38,8 @@ typedef struct {
 vf_err_t vf_pipeline_init(vf_pipeline_t *pipeline, const char *name);
 vf_err_t vf_pipeline_add_unit(vf_pipeline_t *pipeline, vf_unit_t *unit);
 vf_err_t vf_pipeline_create(vf_pipeline_t *pipeline);
+vf_err_t vf_pipeline_start(vf_pipeline_t *pipeline);
+vf_err_t vf_pipeline_stop(vf_pipeline_t *pipeline);
 vf_err_t vf_pipeline_run_once(vf_pipeline_t *pipeline);
 void vf_pipeline_destroy(vf_pipeline_t *pipeline);
 
