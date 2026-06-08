@@ -197,11 +197,25 @@ void vf_buf_queue_shutdown(vf_buf_queue_t *queue)
                 return;
         }
 
+        rc = pthread_mutex_lock(&queue->lock);
+        if (EOK != rc) {
+                log_err("Failed to lock queue mutex. Error: %d", rc);
+
+                return;
+        }
+
         atomic_store(&queue->shutdown, true);
 
         rc = pthread_cond_broadcast(&queue->not_empty);
         if (EOK != rc) {
-                log_err("Failed to broadcast queue condition variable. Error: %d", rc);
+                log_err("Failed to broadcast queue condition. Error: %d", rc);
+        }
+
+        rc = pthread_mutex_unlock(&queue->lock);
+        if (EOK != rc) {
+                log_err("Failed to unlock queue mutex. Error: %d", rc);
+
+                return;
         }
 }
 

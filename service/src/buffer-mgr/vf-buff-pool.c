@@ -249,11 +249,25 @@ void vf_buf_pool_shutdown(vf_buf_pool_t *pool)
                 return;
         }
 
+        rc = pthread_mutex_lock(&pool->lock);
+        if (EOK != rc) {
+                log_err("Failed to lock pool mutex. Error: %d", rc);
+
+                return;
+        }
+
         atomic_store(&pool->shutdown, true);
 
         rc = pthread_cond_broadcast(&pool->slot_available);
         if (EOK != rc) {
                 log_err("Failed to broadcast pool condition variable. Error: %d", rc);
+        }
+
+        rc = pthread_mutex_unlock(&pool->lock);
+        if (EOK != rc) {
+                log_err("Failed to unlock pool mutex. Error: %d", rc);
+
+                return;
         }
 }
 
@@ -262,6 +276,7 @@ vf_err_t vf_buf_pool_release(vf_buf_pool_t *pool, vf_framebuffer_t *fb)
         uint32_t i = 0U;
         int found = 0;
         int rc = 0;
+        uint32_t available_snapshot = 0U;
 
         if ((NULL == pool) || (NULL == fb)) {
                 log_err("Invalid params: pool=%p fb=%p",
@@ -305,6 +320,8 @@ vf_err_t vf_buf_pool_release(vf_buf_pool_t *pool, vf_framebuffer_t *fb)
                 }
         }
 
+        available_snapshot = pool->available;
+
         rc = pthread_mutex_unlock(&pool->lock);
         if (EOK != rc) {
                 log_err("Failed to unlock pool mutex. Error: %d", rc);
@@ -318,7 +335,7 @@ vf_err_t vf_buf_pool_release(vf_buf_pool_t *pool, vf_framebuffer_t *fb)
                 return VF_INVALID_PARAMETER;
         }
 
-        log_dbg("Slot released: index=%u available=%u", i, pool->available);
+        log_dbg("Slot released: index=%u available=%u", i, available_snapshot);
 
         return VF_SUCCESS;
 }
